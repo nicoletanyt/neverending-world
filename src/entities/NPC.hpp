@@ -1,15 +1,16 @@
 #pragma once
 #include "raylib.h"
 #include <map>
+#include <string>
 #include <vector>
 using namespace std;
 
 class NPC {
-private:
+  private:
     const int npcType = 1;
     float direction = 180;
 
-public:
+  public:
     static map<int, map<int, vector<Texture2D>>> assets;
     static constexpr Vector2 size = {64.0f, 64.0f};
 
