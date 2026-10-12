@@ -151,6 +151,10 @@ bool Game::playerColliding() {
         if (CheckCollisionRecs(playerHitbox, enemy.getHitBox()))
             return true;
     }
+    for (const NPC &npc : npcs[location]) {
+        if (CheckCollisionRecs(playerHitbox, npc.getHitBox()))
+            return true;
+    }
 
     return false;
 }
