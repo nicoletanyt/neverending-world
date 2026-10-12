@@ -1,9 +1,11 @@
 #include "Game.hpp"
 #include "Constants.hpp"
+#include "UI.hpp"
 #include "entities/Collectable.hpp"
 #include "raylib.h"
 #include "utils.hpp"
 #include <algorithm>
+#include <vector>
 
 void Game::update() {
     if (IsKeyPressed(KEY_E)) {
@@ -85,6 +87,29 @@ void Game::update() {
         break;
     }
     case GameMode::Dialog: {
+        // go next dialogue
+        const DialogueElement &element =
+            dialogues[activeNPC->type].elements[lineIndex];
+
+        if (const auto *node = std::get_if<DialogueNode>(&element)) {
+            if (IsKeyPressed(KEY_ENTER)) {
+                lineIndex = node->nextIndex;
+                if (lineIndex == -1)
+                    mode = GameMode::Playing;
+            }
+        } else if (const auto *choice = std::get_if<DialogueChoice>(&element)) {
+            const int count = choice->options.size();
+            if (count > 0) {
+                if (IsKeyPressed(KEY_DOWN))
+                    selectedOption = (selectedOption + 1) % count;
+                if (IsKeyPressed(KEY_UP))
+                    selectedOption = (selectedOption - 1 + count) % count;
+                if (IsKeyPressed(KEY_ENTER)) {
+                    lineIndex = choice->options[selectedOption].nextIndex;
+                    selectedOption = 0;
+                }
+            }
+        }
         break;
     }
     }
@@ -188,13 +213,15 @@ void Game::render() {
         if (enemy.health > 0)
             ui.renderEnemyHealth(enemy);
     }
-    for (const NPC &npc : npcs[location]) {
+    for (NPC &npc : npcs[location]) {
         float distance = calculateDistance(player.pos, npc.pos);
         if (distance < 64) {
             ui.renderNPCName(npc);
             if (IsKeyDown(KEY_Q)) {
                 mode = GameMode::Dialog;
-                dialog = (Dialog){&npc};
+                activeDialog = &dialogues.at(npc.type);
+                activeNPC = &npc;
+                lineIndex = 0;
             }
         }
     }
@@ -203,5 +230,42 @@ void Game::render() {
         ui.renderInventory(inventory);
 
     if (mode == GameMode::Dialog)
-        ui.renderDialog(dialog);
+        ui.renderDialogue(*activeDialog, *activeNPC, lineIndex, selectedOption);
+}
+
+void Game::createNPCs() {
+    const NPC sandy = {1, (Vector2){700.0f, 150.0f}, "Sandy"};
+    npcs[location].push_back(sandy);
+
+    dialogues.emplace(
+        sandy.type,
+        Dialogue{
+            {DialogueNode{"Hey there, traveller!", 1},
+             DialogueNode{
+                 "I've been having some trouble with the monsters around here.",
+                 2},
+             DialogueNode{"Think you could help me out?", 3},
+             DialogueChoice{{{"Sure, I'll help!", 4},
+                             {"What's in it for me?", 5},
+                             {"No thanks.", 6}}},
+
+             // 4: accept
+             DialogueNode{
+                 "Great! Take down 10 monsters and come find me. I'll make it "
+                 "worth your while!",
+                 -1},
+
+             // 5: ask about reward
+             DialogueNode{
+                 "I've got a little something saved up. You'll get it once "
+                 "those 10 monsters are gone. Deal?",
+                 7},
+
+             // 6: decline
+             DialogueNode{
+                 "Fair enough. I'll be right here if you change your mind.",
+                 -1},
+
+             // 7: accept or decline
+             DialogueChoice{{{"Deal!", 4}, {"No thanks.", 6}}}}});
 }

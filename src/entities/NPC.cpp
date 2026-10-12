@@ -2,7 +2,6 @@
 #include "../utils.hpp"
 #include "Player.hpp"
 #include <filesystem>
-#include <iostream>
 #include <map>
 #include <raylib.h>
 #include <regex>
@@ -56,6 +55,6 @@ float NPC::getZLayer() const { return pos.y; }
 Rectangle NPC::getHitBox() const { return {pos.x + 16, pos.y + 7, 32, 52}; }
 
 void NPC::render() const {
-    Texture2D texture = assets[npcType][direction][static_cast<int>(frame)];
+    Texture2D texture = assets[type][direction][static_cast<int>(frame)];
     DrawTextureV(texture, pos, WHITE);
 }

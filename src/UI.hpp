@@ -11,7 +11,7 @@
 using namespace std;
 
 class Player;
-struct Dialog;
+struct Dialogue;
 struct InventoryItem;
 
 enum class Align { Center, Start, End };
@@ -93,8 +93,8 @@ struct TextStyle {
     float fontSize = 20.0f;
     float spacing = 2.0f;
     Color colour = WHITE;
-    Align horizontal = Align::Center;
-    Align vertical = Align::Center;
+    Align horizontal = Align::Start;
+    Align vertical = Align::Start;
 };
 
 class UI {
@@ -126,7 +126,8 @@ class UI {
     void renderEnemyHealth(const Enemy &enemy);
     void renderNPCName(const NPC &npc);
     void renderInventory(const vector<InventoryItem> &inventory);
-    void renderDialog(const Dialog &dialog);
+    void renderDialogue(const Dialogue &dialogue, const NPC &npc, int lineIndex,
+                        int selectedOption);
 
     Rectangle getInventorySlotRect(int index);
 };

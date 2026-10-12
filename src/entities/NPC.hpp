@@ -16,12 +16,13 @@ class NPC {
     static map<int, Texture2D> avatars;
     static constexpr Vector2 size = {64.0f, 64.0f};
 
-    const int npcType = 1;
+    const int type;
     Vector2 pos = {0, 0};
     float frame = 0;
     string name;
 
-    NPC(Vector2 pos, string name) : pos(pos), name(name) {};
+    NPC(int type, Vector2 pos, string name)
+        : type(type), pos(pos), name(name) {};
 
     float getZLayer() const;
     Rectangle getHitBox() const;

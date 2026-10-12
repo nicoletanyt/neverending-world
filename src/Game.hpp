@@ -10,6 +10,8 @@
 #include <map>
 #include <raylib.h>
 #include <set>
+#include <variant>
+#include <vector>
 
 enum class AssetTypes { Background, Hearts };
 enum class GameMode { Playing, Inventory, Dialog };
@@ -19,8 +21,19 @@ struct InventoryItem {
     int quantity;
 };
 
-struct Dialog {
-    const NPC *npc = nullptr;
+struct DialogueNode {
+    string text;
+    int nextIndex = -1;
+};
+
+struct DialogueChoice {
+    vector<DialogueNode> options;
+};
+
+using DialogueElement = variant<DialogueNode, DialogueChoice>;
+
+struct Dialogue {
+    const vector<DialogueElement> elements;
 };
 
 class Game {
@@ -39,7 +52,13 @@ class Game {
     map<Location, vector<Collectable>> collectables;
 
     GameMode mode = GameMode::Playing;
-    Dialog dialog;
+    map<int, Dialogue> dialogues;
+
+    Dialogue *activeDialog = nullptr;
+    NPC *activeNPC = nullptr;
+
+    int selectedOption = 0; // for dialog
+    int lineIndex = 0;      // for dialog
 
     Sound swordSound = LoadSound("assets/sounds/swoosh.mp3");
 
@@ -55,6 +74,8 @@ class Game {
     void addToInventory(const Collectable &collectable);
     void removeFromInventory(const CollectableType &type);
     vector<Collectable>::iterator getCollectable();
+
+    void createNPCs();
 
   public:
     Game() {
@@ -73,7 +94,7 @@ class Game {
         location = {0, 0};
         visited.insert(location);
         trees[location] = {};
-        npcs[location].emplace_back((Vector2){700.0f, 150.0f}, "Sandy");
+        createNPCs();
     }
 
     void update();

@@ -5,9 +5,9 @@
 #include "entities/Player.hpp"
 #include <algorithm>
 #include <format>
-#include <iostream>
 #include <raylib.h>
 #include <string>
+#include <variant>
 
 void UI::loadAssets() {
     const vector<string> heartSrc = {
@@ -107,37 +107,63 @@ void UI::renderInventoryItem(const InventoryItem &item, const Rectangle &slot,
         fontSize, STYLES.quantitySpacing, colour);
 }
 
-void UI::renderDialog(const Dialog &dialog) {
+void UI::renderDialogue(const Dialogue &dialogue, const NPC &npc, int lineIndex,
+                        int selectedOption) {
     const auto &style = STYLES.dialog;
-    const NPC *npc = dialog.npc;
     DrawRectangleRounded(
         {style.margin, style.margin, style.width, style.height}, .1f, 4,
         Fade(WHITE, 0.9f));
     const Rectangle contentRect = {
         style.margin + style.padding, style.margin + style.padding,
         style.width - style.padding * 2, style.height - style.padding * 2};
-    Texture2D asset = npc->avatars[npc->npcType - 1];
+    Texture2D asset = npc.avatars[npc.type - 1];
     const float scale = 7, colGap = 20.0f;
     const float leftColWidth = asset.width * scale;
 
     DrawTextureEx(asset, {contentRect.x, contentRect.y}, 0, scale, WHITE);
 
     renderTextInBounds(
-        npc->name,
-        {contentRect.x, contentRect.y + asset.height * scale, leftColWidth,
+        npc.name,
+        {contentRect.x, contentRect.y + asset.height * scale + 20.0f,
+         leftColWidth,
          contentRect.height - contentRect.y - asset.height * scale},
         {.fontSize = 50.0f, .colour = BLACK, .horizontal = Align::Center});
 
-    const string convo =
-        "hi hi how are you i am doing fine thank you and you\ni'm sleepy";
-    renderTextInBounds(convo,
-                       {contentRect.x + leftColWidth + colGap, contentRect.y,
-                        contentRect.width - leftColWidth, contentRect.height},
-                       {.fontSize = 30.0f,
-                        .colour = BLACK,
-                        .horizontal = Align::Start,
-                        .vertical = Align::Start},
-                       true);
+    const Rectangle dialogueRect = {
+        contentRect.x + leftColWidth + colGap, contentRect.y,
+        contentRect.width - leftColWidth, contentRect.height};
+    const DialogueElement &element = dialogue.elements[lineIndex];
+    if (const auto *node = std::get_if<DialogueNode>(&element)) {
+        renderTextInBounds(node->text, dialogueRect,
+                           {
+                               .fontSize = 30.0f,
+                               .colour = BLACK,
+                           },
+                           true);
+        renderTextInBounds(" > Next", dialogueRect,
+                           {
+                               .fontSize = 30.0f,
+                               .colour = RED,
+                               .horizontal = Align::Start,
+                               .vertical = Align::End,
+                           },
+                           true);
+    } else if (const auto *choice = std::get_if<DialogueChoice>(&element)) {
+        for (int i = 0; i < (int)choice->options.size(); ++i) {
+            const string chocieText = "> " + choice->options[i].text;
+            Color colour = selectedOption == i ? RED : BLACK;
+            renderTextInBounds(chocieText,
+
+                               {dialogueRect.x, dialogueRect.y + 80.0f * i,
+                                dialogueRect.width,
+                                dialogueRect.height - 80.0f * i},
+                               {
+                                   .fontSize = 30.0f,
+                                   .colour = colour,
+                               },
+                               true);
+        }
+    }
 }
 
 void UI::renderEnemyHealth(const Enemy &enemy) {
