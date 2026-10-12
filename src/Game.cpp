@@ -239,33 +239,52 @@ void Game::createNPCs() {
 
     dialogues.emplace(
         sandy.type,
-        Dialogue{
-            {DialogueNode{"Hey there, traveller!", 1},
-             DialogueNode{
-                 "I've been having some trouble with the monsters around here.",
-                 2},
-             DialogueNode{"Think you could help me out?", 3},
-             DialogueChoice{{{"Sure, I'll help!", 4},
-                             {"What's in it for me?", 5},
-                             {"No thanks.", 6}}},
+        Dialogue{{
+            // 0 - introduction
+            DialogueNode{"Oh! Hello there. I'm Sandy. I look after the "
+                         "library nearby… or, well, I try to.",
+                         1},
 
-             // 4: accept
-             DialogueNode{
-                 "Great! Take down 10 monsters and come find me. I'll make it "
-                 "worth your while!",
-                 -1},
+            // 1 - explain the problem
+            DialogueNode{"There are monsters wandering around the area, and I "
+                         "can't exactly fight them myself.",
+                         2},
 
-             // 5: ask about reward
-             DialogueNode{
-                 "I've got a little something saved up. You'll get it once "
-                 "those 10 monsters are gone. Deal?",
-                 7},
+            // 2 - ask for help
+            DialogueNode{"Would you mind helping me clear them out? I'd "
+                         "really appreciate it.",
+                         3},
 
-             // 6: decline
-             DialogueNode{
-                 "Fair enough. I'll be right here if you change your mind.",
-                 -1},
+            // 3 - player choices
+            DialogueChoice{{{"Sure, I'll help!", 4},
+                            {"What do I need to do?", 5},
+                            {"No thanks.", 7}}},
 
-             // 7: accept or decline
-             DialogueChoice{{{"Deal!", 4}, {"No thanks.", 6}}}}});
+            // 4 - accept quest
+            DialogueNode{"Really? Thank you! Just take care of ten of the "
+                         "monsters nearby, and I should be able to move around "
+                         "more safely. Please be careful out there.",
+                         6},
+
+            // 5 - explain quest objective
+            DialogueNode{
+                "Just take care of ten of the monsters nearby. I would "
+                "do it myself, but I'm afraid I'm not much of a fighter.",
+                6},
+
+            // 6 - follow-up after explaining
+            DialogueNode{"Once you're done, come back and find me!", -1},
+
+            // 7 - decline quest
+            DialogueNode{"Oh… that's alright. I understand. I'll just have to "
+                         "manage on my own for now.",
+                         8},
+
+            // 8 - farewell after declining
+            DialogueNode{
+                "Do let me know if you change your mind! And be careful "
+                "if you decide to leave. It's rather easy to lose your "
+                "way around here.",
+                -1},
+        }});
 }
