@@ -5,15 +5,18 @@
 #include <vector>
 using namespace std;
 
+class Player;
+
 class NPC {
   private:
-    const int npcType = 1;
     float direction = 180;
 
   public:
     static map<int, map<int, vector<Texture2D>>> assets;
+    static map<int, Texture2D> avatars;
     static constexpr Vector2 size = {64.0f, 64.0f};
 
+    const int npcType = 1;
     Vector2 pos = {0, 0};
     float frame = 0;
     string name;
@@ -25,6 +28,7 @@ class NPC {
 
     static void loadAssets();
     void update();
+    bool isInteraction(Player &player);
     void render() const;
     void animate(float deltaTime);
 };

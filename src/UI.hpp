@@ -6,10 +6,12 @@
 #include "entities/NPC.hpp"
 #include <map>
 #include <raylib.h>
+#include <string>
 #include <vector>
 using namespace std;
 
 class Player;
+struct Dialog;
 struct InventoryItem;
 
 enum class Align { Center, Start, End };
@@ -29,11 +31,14 @@ struct SlotStyle {
     float borderOpacity = 0.8f;
 };
 
-struct InventoryStyle {
+struct PanelStyle {
     float margin = 50.0f;
     float padding = 50.0f;
     float width = WINDOW_WIDTH - margin * 2;
     float height = WINDOW_HEIGHT - margin * 2;
+};
+
+struct InventoryStyle : PanelStyle {
     float slotSize = 60.0f;
     float slotGap = 20.0f;
     float gridTopOffset = 50.0f;
@@ -44,6 +49,8 @@ struct InventoryStyle {
     Color selectedSlotColor = BLUE;
     SlotStyle slot{.roundness = 0.26f, .segments = 0};
 };
+
+struct DialogStyle : PanelStyle {};
 
 struct HotbarStyle {
     float slotSize = 50.0f;
@@ -76,6 +83,8 @@ struct UIStyle {
     InventoryStyle inventory;
     HotbarStyle hotbar;
     TopbarStyle topbar;
+    DialogStyle dialog;
+    PanelStyle panel;
     Vector2 quantityOffset = {8.0f, 8.0f};
     float quantitySpacing = 2.0f;
 };
@@ -89,7 +98,7 @@ struct TextStyle {
 };
 
 class UI {
-private:
+  private:
     inline static constexpr UIStyle STYLES{};
 
     vector<Texture2D> hearts;
@@ -97,7 +106,7 @@ private:
     Texture2D profileAsset;
 
     void renderTextInBounds(const string &text, Rectangle bounds,
-                            TextStyle style);
+                            TextStyle style, bool textWrap = false);
 
     void renderSlot(const Rectangle &rect, const SlotStyle &style,
                     Color fillColor);
@@ -107,15 +116,17 @@ private:
     void renderDetailItem(const InventoryItem &item,
                           const Rectangle &contentRect);
 
-public:
+  public:
     Rectangle consumeBtn;
     int selectedSquare = -1;
+
     void loadAssets();
     void renderTopbar(Player &player);
     void renderHotbar(const vector<InventoryItem> &inventory);
     void renderEnemyHealth(const Enemy &enemy);
-    void renderNPCName(const NPC &npc, bool isClose);
+    void renderNPCName(const NPC &npc);
     void renderInventory(const vector<InventoryItem> &inventory);
+    void renderDialog(const Dialog &dialog);
 
     Rectangle getInventorySlotRect(int index);
 };

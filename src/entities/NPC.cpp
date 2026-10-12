@@ -1,7 +1,10 @@
 #include "NPC.hpp"
+#include "../utils.hpp"
+#include "Player.hpp"
 #include <filesystem>
 #include <iostream>
 #include <map>
+#include <raylib.h>
 #include <regex>
 
 using namespace std;
@@ -9,6 +12,7 @@ using recursive_directory_iterator =
     std::filesystem::recursive_directory_iterator;
 
 map<int, map<int, vector<Texture2D>>> NPC::assets;
+map<int, Texture2D> NPC::avatars;
 
 void NPC::loadAssets() {
     const regex pattern(R"(^npc_(\d+)_walk_(-?\d+)_(\d+)$)");
@@ -36,9 +40,16 @@ void NPC::loadAssets() {
             }
         }
     }
+    avatars[0] = LoadTexture("assets/avatars/npc_1.png");
 }
 
 void NPC::update() {}
+
+bool NPC::isInteraction(Player &player) {
+    // interacting with npc
+    float distance = calculateDistance(player.pos, pos);
+    return distance < 64 && IsKeyDown(KEY_Q);
+}
 
 float NPC::getZLayer() const { return pos.y; }
 

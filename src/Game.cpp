@@ -84,6 +84,9 @@ void Game::update() {
 
         break;
     }
+    case GameMode::Dialog: {
+        break;
+    }
     }
 }
 
@@ -187,9 +190,18 @@ void Game::render() {
     }
     for (const NPC &npc : npcs[location]) {
         float distance = calculateDistance(player.pos, npc.pos);
-        ui.renderNPCName(npc, distance < 64);
+        if (distance < 64) {
+            ui.renderNPCName(npc);
+            if (IsKeyDown(KEY_Q)) {
+                mode = GameMode::Dialog;
+                dialog = (Dialog){&npc};
+            }
+        }
     }
 
     if (mode == GameMode::Inventory)
         ui.renderInventory(inventory);
+
+    if (mode == GameMode::Dialog)
+        ui.renderDialog(dialog);
 }

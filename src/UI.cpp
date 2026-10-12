@@ -5,6 +5,8 @@
 #include "entities/Player.hpp"
 #include <algorithm>
 #include <format>
+#include <iostream>
+#include <raylib.h>
 #include <string>
 
 void UI::loadAssets() {
@@ -105,6 +107,39 @@ void UI::renderInventoryItem(const InventoryItem &item, const Rectangle &slot,
         fontSize, STYLES.quantitySpacing, colour);
 }
 
+void UI::renderDialog(const Dialog &dialog) {
+    const auto &style = STYLES.dialog;
+    const NPC *npc = dialog.npc;
+    DrawRectangleRounded(
+        {style.margin, style.margin, style.width, style.height}, .1f, 4,
+        Fade(WHITE, 0.9f));
+    const Rectangle contentRect = {
+        style.margin + style.padding, style.margin + style.padding,
+        style.width - style.padding * 2, style.height - style.padding * 2};
+    Texture2D asset = npc->avatars[npc->npcType - 1];
+    const float scale = 7, colGap = 20.0f;
+    const float leftColWidth = asset.width * scale;
+
+    DrawTextureEx(asset, {contentRect.x, contentRect.y}, 0, scale, WHITE);
+
+    renderTextInBounds(
+        npc->name,
+        {contentRect.x, contentRect.y + asset.height * scale, leftColWidth,
+         contentRect.height - contentRect.y - asset.height * scale},
+        {.fontSize = 50.0f, .colour = BLACK, .horizontal = Align::Center});
+
+    const string convo =
+        "hi hi how are you i am doing fine thank you and you\ni'm sleepy";
+    renderTextInBounds(convo,
+                       {contentRect.x + leftColWidth + colGap, contentRect.y,
+                        contentRect.width - leftColWidth, contentRect.height},
+                       {.fontSize = 30.0f,
+                        .colour = BLACK,
+                        .horizontal = Align::Start,
+                        .vertical = Align::Start},
+                       true);
+}
+
 void UI::renderEnemyHealth(const Enemy &enemy) {
     float padding = 1.0f;
     Vector2 size = {50.0f, 6.0f};
@@ -121,7 +156,7 @@ void UI::renderEnemyHealth(const Enemy &enemy) {
     DrawRectangleRounded(inner, 0.2f, 4, RED);
 }
 
-void UI::renderNPCName(const NPC &npc, bool isClose) {
+void UI::renderNPCName(const NPC &npc) {
     renderTextInBounds(
         npc.name, (Rectangle){npc.pos.x, npc.pos.y - 10.0f, npc.size.x, 20.0f},
         (TextStyle){
@@ -131,18 +166,15 @@ void UI::renderNPCName(const NPC &npc, bool isClose) {
             .vertical = Align::Center,
         });
 
-    if (isClose) {
-        Rectangle keyRect = {npc.pos.x + 30.0f, npc.pos.y + 40.0f, 20.0f,
-                             20.0f};
-        DrawRectangleRounded(keyRect, 0.3f, 8, Fade(BLACK, 0.4f));
-        renderTextInBounds("Q", keyRect,
-                           (TextStyle){
-                               .fontSize = 10.0f,
-                               .colour = WHITE,
-                               .horizontal = Align::Center,
-                               .vertical = Align::Center,
-                           });
-    }
+    Rectangle keyRect = {npc.pos.x + 30.0f, npc.pos.y + 40.0f, 20.0f, 20.0f};
+    DrawRectangleRounded(keyRect, 0.3f, 8, Fade(BLACK, 0.4f));
+    renderTextInBounds("Q", keyRect,
+                       (TextStyle){
+                           .fontSize = 10.0f,
+                           .colour = WHITE,
+                           .horizontal = Align::Center,
+                           .vertical = Align::Center,
+                       });
 }
 
 void UI::renderInventory(const vector<InventoryItem> &inventory) {
@@ -235,10 +267,11 @@ Rectangle UI::getInventorySlotRect(int index) {
 }
 
 void UI::renderTextInBounds(const string &text, Rectangle bounds,
-                            TextStyle style) {
-    const Vector2 textSize = MeasureTextEx(GetFontDefault(), text.c_str(),
-                                           style.fontSize, style.spacing);
+                            TextStyle style, bool textWrap) {
     Vector2 textPos;
+    const Font font = GetFontDefault();
+    const Vector2 textSize =
+        MeasureTextEx(font, text.c_str(), style.fontSize, style.spacing);
 
     switch (style.horizontal) {
     case Align::Start:
@@ -264,6 +297,44 @@ void UI::renderTextInBounds(const string &text, Rectangle bounds,
         break;
     }
 
-    DrawTextEx(GetFontDefault(), text.c_str(), textPos, style.fontSize,
+    if (!textWrap) {
+        DrawTextEx(font, text.c_str(), textPos, style.fontSize, style.spacing,
+                   style.colour);
+        return;
+    }
+
+    const float endX = bounds.x + bounds.width;
+    const float spaceWidth =
+        MeasureTextEx(font, " ", style.fontSize, style.spacing).x;
+    Vector2 currentPos = {textPos.x, textPos.y};
+    string word = "";
+
+    for (const char &c : text) {
+        if (c == ' ' || c == '\n') {
+            Vector2 wordSize = MeasureTextEx(GetFontDefault(), word.c_str(),
+                                             style.fontSize, style.spacing);
+            if (currentPos.x + wordSize.x > endX) {
+                currentPos = {textPos.x, currentPos.y + style.fontSize * 1.5f};
+            }
+            DrawTextEx(font, (word + " ").c_str(), currentPos, style.fontSize,
+                       style.spacing, style.colour);
+            currentPos.x += wordSize.x + spaceWidth;
+            word = "";
+        } else {
+            word += c;
+        }
+        if (c == '\n') {
+            currentPos = {textPos.x, currentPos.y + style.fontSize * 1.5f};
+        }
+    }
+    Vector2 wordSize = MeasureTextEx(GetFontDefault(), word.c_str(),
+                                     style.fontSize, style.spacing);
+    if (currentPos.x + wordSize.x > endX) {
+        currentPos = {textPos.x, currentPos.y + style.fontSize * 1.5f};
+        DrawTextEx(font, word.c_str(), currentPos, style.fontSize,
+                   style.spacing, style.colour);
+    }
+    DrawTextEx(font, (word + " ").c_str(), currentPos, style.fontSize,
                style.spacing, style.colour);
+    currentPos.x += wordSize.x + spaceWidth;
 }

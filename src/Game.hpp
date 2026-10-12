@@ -12,15 +12,19 @@
 #include <set>
 
 enum class AssetTypes { Background, Hearts };
-enum class GameMode { Playing, Inventory };
+enum class GameMode { Playing, Inventory, Dialog };
 
 struct InventoryItem {
     CollectableType type;
     int quantity;
 };
 
+struct Dialog {
+    const NPC *npc = nullptr;
+};
+
 class Game {
-private:
+  private:
     UI ui;
     Player player;
     map<Location, vector<Tree>> trees;
@@ -35,6 +39,7 @@ private:
     map<Location, vector<Collectable>> collectables;
 
     GameMode mode = GameMode::Playing;
+    Dialog dialog;
 
     Sound swordSound = LoadSound("assets/sounds/swoosh.mp3");
 
@@ -51,7 +56,7 @@ private:
     void removeFromInventory(const CollectableType &type);
     vector<Collectable>::iterator getCollectable();
 
-public:
+  public:
     Game() {
         SetRandomSeed(static_cast<unsigned int>(std::time(nullptr)));
 
