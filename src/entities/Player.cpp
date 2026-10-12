@@ -41,6 +41,7 @@ string weaponToString(Weapon weapon) {
         return "";
     }
     }
+    return "";
 }
 
 bool Player::move(float deltaTime, Location *location) {

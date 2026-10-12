@@ -6,6 +6,7 @@ int main() {
     InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "the neverending world");
     InitAudioDevice();
     SetTargetFPS(60);
+    SetExitKey(KEY_NULL);
 
     Game game;
 

@@ -29,6 +29,7 @@ void Game::update() {
             auto item = getCollectable();
             if (item != currentCollectables.end()) {
                 addToInventory(*item);
+                PlaySound(beepSound);
                 currentCollectables.erase(item);
             }
         }
@@ -94,19 +95,25 @@ void Game::update() {
         if (const auto *node = std::get_if<DialogueNode>(&element)) {
             if (IsKeyPressed(KEY_ENTER)) {
                 lineIndex = node->nextIndex;
+                PlaySound(selectSound);
                 if (lineIndex == -1)
                     mode = GameMode::Playing;
             }
         } else if (const auto *choice = std::get_if<DialogueChoice>(&element)) {
             const int count = choice->options.size();
             if (count > 0) {
-                if (IsKeyPressed(KEY_DOWN))
+                if (IsKeyPressed(KEY_DOWN)) {
                     selectedOption = (selectedOption + 1) % count;
-                if (IsKeyPressed(KEY_UP))
+                    PlaySound(selectSound);
+                }
+                if (IsKeyPressed(KEY_UP)) {
                     selectedOption = (selectedOption - 1 + count) % count;
+                    PlaySound(selectSound);
+                }
                 if (IsKeyPressed(KEY_ENTER)) {
                     lineIndex = choice->options[selectedOption].nextIndex;
                     selectedOption = 0;
+                    PlaySound(selectSound);
                 }
             }
         }

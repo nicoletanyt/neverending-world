@@ -25,9 +25,7 @@ struct SlotStyle {
     float roundness = 0.2f;
     int segments = 8;
     float borderWidth = 4.0f;
-    Color fillColor = GRAY;
     float fillOpacity = 0.4f;
-    Color borderColor = WHITE;
     float borderOpacity = 0.8f;
 };
 
@@ -41,12 +39,10 @@ struct PanelStyle {
 struct InventoryStyle : PanelStyle {
     float slotSize = 60.0f;
     float slotGap = 20.0f;
-    float gridTopOffset = 50.0f;
+    float gridTopOffset = 100.0f;
     float gap = 50.0f; // column gap
     float fontSize = 20.0f;
 
-    Color quantityColor = WHITE;
-    Color selectedSlotColor = BLUE;
     SlotStyle slot{.roundness = 0.26f, .segments = 0};
 };
 
@@ -58,7 +54,6 @@ struct HotbarStyle {
     float rightMargin = 30.0f;
     float bottomMargin = 30.0f;
     float fontSize = 20.0f;
-    Color quantityColor = RED;
     SlotStyle slot{.roundness = 0.26f, .segments = 0};
 };
 
@@ -72,9 +67,7 @@ struct TopbarStyle {
     int heartCount = 5;
     float roundness = 0.3f;
     int segments = 0;
-    Color fillColor = WHITE;
     float fillOpacity = 0.4f;
-    Color profileFillColor = BLACK;
     float profileFillOpacity = 0.4f;
     Color iconColor = WHITE;
 };
@@ -97,9 +90,20 @@ struct TextStyle {
     Align vertical = Align::Start;
 };
 
+namespace Palette {
+constexpr Color Background = {37, 43, 40, 255};   // #252B28
+constexpr Color Text = {216, 208, 184, 255};      // #D8D0B8
+constexpr Color MossGreen = {105, 124, 104, 255}; // #697C68
+constexpr Color Brown = {156, 118, 91, 255};      // #9C765B
+constexpr Color MutedRed = {166, 95, 89, 255};    // #A65F59
+constexpr Color FogGrey = {146, 154, 154, 255};   // #929A9A
+} // namespace Palette
+
 class UI {
   private:
     inline static constexpr UIStyle STYLES{};
+
+    static Font font;
 
     vector<Texture2D> hearts;
     map<CollectableType, ItemIcon> itemAssets;

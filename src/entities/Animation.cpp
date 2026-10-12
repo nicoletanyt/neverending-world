@@ -29,4 +29,5 @@ string animationTypeToString(AnimationType type) {
         return "";
     }
     }
+    return "";
 }
