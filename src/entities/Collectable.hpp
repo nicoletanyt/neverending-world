@@ -11,15 +11,15 @@ enum class CollectableType { Coin, Potion };
 string collectableTypeToString(CollectableType type);
 
 class Collectable {
-private:
+  private:
     float scale = 1;
     Vector2 size;
 
-protected:
+  protected:
     Vector2 drawPos;
     static map<CollectableType, vector<Texture2D>> assets;
 
-public:
+  public:
     CollectableType type;
 
     Collectable(Vector2 pos, CollectableType type) : type(type) {

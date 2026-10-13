@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 
 using namespace std;
@@ -15,6 +16,7 @@ struct Quest {
     int target;
     int progress;
     QuestStatus status;
+    function<void()> onCompletion;
 
     int npcId;
 };

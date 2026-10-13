@@ -30,7 +30,7 @@ void Game::update() {
             auto &currentCollectables = collectables[location];
             auto item = getCollectable();
             if (item != currentCollectables.end()) {
-                addToInventory(*item);
+                addToInventory(item->type);
                 PlaySound(beepSound);
                 currentCollectables.erase(item);
             }
@@ -127,6 +127,7 @@ void Game::update() {
                     break;
                 }
                 case DialogueAction::CompleteQuest: {
+                    activeQuest->onCompletion();
                     cout << "Quest Completed!\n";
                     activeQuest = nullptr;
                     break;
@@ -190,14 +191,14 @@ vector<Collectable>::iterator Game::getCollectable() {
                    });
 }
 
-void Game::addToInventory(const Collectable &collectable) {
+void Game::addToInventory(const CollectableType &type, int quantity) {
     for (InventoryItem &item : inventory) {
-        if (item.type == collectable.type) {
-            item.quantity++;
+        if (item.type == type) {
+            item.quantity += quantity;
             return;
         }
     }
-    inventory.emplace_back(collectable.type, 1);
+    inventory.emplace_back(type, quantity);
 }
 
 void Game::removeFromInventory(const CollectableType &type) {
@@ -371,6 +372,7 @@ void Game::initQuests() {
         1,
         0,
         QuestStatus::InActive,
+        [this]() { addToInventory(CollectableType::Coin, 10); },
         1,
     };
 }

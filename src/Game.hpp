@@ -63,7 +63,7 @@ class Game {
     bool playerColliding();
     bool enemyColliding();
 
-    void addToInventory(const Collectable &collectable);
+    void addToInventory(const CollectableType &type, int quantity = 1);
     void removeFromInventory(const CollectableType &type);
     vector<Collectable>::iterator getCollectable();
 
