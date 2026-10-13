@@ -1,5 +1,7 @@
 #include "Game.hpp"
 #include "Constants.hpp"
+#include "Dialogue.hpp"
+#include "Quest.hpp"
 #include "UI.hpp"
 #include "entities/Collectable.hpp"
 #include "raylib.h"
@@ -51,11 +53,21 @@ void Game::update() {
              currEnemy != currentEnemies.end();) {
             currEnemy->update(player, dt, trees[location]);
             if (currEnemy->health == -50) {
+                // enemy dies
                 CollectableType type = GetRandomValue(1, 10) <= 3
                                            ? CollectableType::Potion
                                            : CollectableType::Coin;
                 collectables[location].emplace_back(currEnemy->pos, type);
                 currEnemy = currentEnemies.erase(currEnemy);
+                // update quest
+                if (activeQuest &&
+                    activeQuest->type == QuestType::KillEnemies &&
+                    activeQuest->status == QuestStatus::Active) {
+                    activeQuest->progress++;
+                    if (activeQuest->progress == activeQuest->target) {
+                        activeQuest->status = QuestStatus::ReadyToReport;
+                    }
+                }
             } else {
                 ++currEnemy;
             }
@@ -88,36 +100,44 @@ void Game::update() {
         break;
     }
     case GameMode::Dialog: {
-        // go next dialogue
-        const DialogueElement &element =
-            dialogues[activeNPC->type].elements[lineIndex];
+        const Dialogue &currentDialogue =
+            activeDialog->dialogues[activeQuest ? activeQuest->status
+                                                : QuestStatus::InActive];
+        const DialogueNode &node = currentDialogue[lineIndex];
 
-        if (const auto *node = std::get_if<DialogueNode>(&element)) {
-            if (IsKeyPressed(KEY_ENTER)) {
-                lineIndex = node->nextIndex;
+        const int count = node.choices.size();
+        if (count > 0) {
+            if (IsKeyPressed(KEY_DOWN)) {
+                selectedOption = (selectedOption + 1) % count;
                 PlaySound(selectSound);
+            }
+            if (IsKeyPressed(KEY_UP)) {
+                selectedOption = (selectedOption - 1 + count) % count;
+                PlaySound(selectSound);
+            }
+            if (IsKeyPressed(KEY_ENTER)) {
+                lineIndex = node.choices[selectedOption].nextIndex;
+                selectedOption = 0;
+                PlaySound(selectSound);
+
+                switch (node.choices[selectedOption].action) {
+                case DialogueAction::AcceptQuest: {
+                    activeQuest = &quests.at(activeDialog->questId);
+                    activeQuest->status = QuestStatus::Active;
+                    break;
+                }
+                case DialogueAction::CompleteQuest: {
+                    cout << "Quest Completed!\n";
+                    activeQuest = nullptr;
+                    break;
+                }
+                case DialogueAction::None:
+                    break;
+                }
                 if (lineIndex == -1)
                     mode = GameMode::Playing;
             }
-        } else if (const auto *choice = std::get_if<DialogueChoice>(&element)) {
-            const int count = choice->options.size();
-            if (count > 0) {
-                if (IsKeyPressed(KEY_DOWN)) {
-                    selectedOption = (selectedOption + 1) % count;
-                    PlaySound(selectSound);
-                }
-                if (IsKeyPressed(KEY_UP)) {
-                    selectedOption = (selectedOption - 1 + count) % count;
-                    PlaySound(selectSound);
-                }
-                if (IsKeyPressed(KEY_ENTER)) {
-                    lineIndex = choice->options[selectedOption].nextIndex;
-                    selectedOption = 0;
-                    PlaySound(selectSound);
-                }
-            }
         }
-        break;
     }
     }
 }
@@ -219,6 +239,8 @@ void Game::render() {
 
     ui.renderTopbar(player);
     ui.renderHotbar(inventory);
+    if (activeQuest)
+        ui.renderQuest(*activeQuest);
 
     for (const Enemy &enemy : enemies[location]) {
         if (enemy.health > 0)
@@ -228,74 +250,127 @@ void Game::render() {
         float distance = calculateDistance(player.pos, npc.pos);
         if (distance < 64) {
             ui.renderNPCName(npc);
-            if (IsKeyDown(KEY_Q)) {
-                mode = GameMode::Dialog;
-                activeDialog = &dialogues.at(npc.type);
-                activeNPC = &npc;
-                lineIndex = 0;
-            }
+            if (IsKeyDown(KEY_Q))
+                interactWithNPC(npc);
         }
     }
 
     if (mode == GameMode::Inventory)
         ui.renderInventory(inventory);
 
-    if (mode == GameMode::Dialog)
-        ui.renderDialogue(*activeDialog, *activeNPC, lineIndex, selectedOption);
+    if (mode == GameMode::Dialog) {
+        Dialogue &current =
+            activeDialog->dialogues[activeQuest ? activeQuest->status
+                                                : QuestStatus::InActive];
+        ui.renderDialogue(current[lineIndex], *activeNPC, selectedOption);
+    }
 }
 
-void Game::createNPCs() {
+void Game::interactWithNPC(NPC &npc) {
+    mode = GameMode::Dialog;
+    activeDialog = &dialogues.at(npc.type);
+    activeNPC = &npc;
+    lineIndex = 0;
+}
+
+void Game::initNPC() {
     const NPC sandy = {1, (Vector2){700.0f, 150.0f}, "Sandy"};
     npcs[location].push_back(sandy);
 
-    dialogues.emplace(
-        sandy.type,
-        Dialogue{{
-            // 0 - introduction
-            DialogueNode{"Oh! Hello there. I'm Sandy. I look after the "
-                         "library nearby… or, well, I try to.",
-                         1},
+    Dialogue sandyIntro{
+        dialogueNext("Oh! Hello there. I'm Sandy. I look after the "
+                     "library nearby… or, well, I try to.",
+                     1),
+        dialogueNext("There are monsters wandering around the area, "
+                     "and I can't exactly fight them myself.",
+                     2),
 
-            // 1 - explain the problem
-            DialogueNode{"There are monsters wandering around the area, and I "
-                         "can't exactly fight them myself.",
-                         2},
+        {"Would you mind helping me clear them out? I'd really "
+         "appreciate it.",
+         {
+             {"Sure, I'll help!", 3},
+             {"What do I need to do?", 4},
+             {"No thanks.", 6},
+         }},
+        dialogueNext("Really? Thank you! Just take care of ten of the "
+                     "monsters nearby, and I should be able to move around "
+                     "more safely. Please be careful out there.",
+                     5),
+        dialogueNext("Just take care of ten of the monsters nearby. I "
+                     "would "
+                     "do it myself, but I'm afraid I'm not much of a "
+                     "fighter.",
+                     5),
+        dialogueNext("Once you're done, come back and find me!", -1,
+                     DialogueAction::AcceptQuest),
+        dialogueNext("Oh… that's alright. I understand. I'll just have to "
+                     "manage on my own for now.",
+                     7),
+        dialogueNext("Do let me know if you change your mind! And be "
+                     "careful "
+                     "if you decide to leave. It's rather easy to lose "
+                     "your "
+                     "way around here.",
+                     -1),
+    };
 
-            // 2 - ask for help
-            DialogueNode{"Would you mind helping me clear them out? I'd "
-                         "really appreciate it.",
-                         3},
+    QuestDialogue sandyClearQuest{
+        .questId = QuestId::SandyClearMonsters,
+        .dialogues =
+            {{QuestStatus::InActive, sandyIntro},
+             {
+                 QuestStatus::Active,
+                 {
+                     {"Oh, you're back! How's the monster hunting going?",
+                      {
+                          {"Still working on it.", 1},
+                          {"Remind me what I need to do?", 2},
+                      }},
+                     dialogueNext(
+                         "No rush! Well… maybe a little. Just be careful "
+                         "out there, alright?",
+                         -1),
+                     dialogueNext("Ten monsters, that's all! Come find me when "
+                                  "you're done. I'll be right here!",
+                                  -1),
+                 },
+             },
+             {QuestStatus::ReadyToReport,
+              {
 
-            // 3 - player choices
-            DialogueChoice{{{"Sure, I'll help!", 4},
-                            {"What do I need to do?", 5},
-                            {"No thanks.", 7}}},
+                  dialogueNext("You're back! And in one piece! Does that mean "
+                               "you've taken care of those monsters?",
+                               1),
+                  dialogueNext(
+                      "All ten of them? That's incredible! I can finally "
+                      "get back to looking after the library.",
+                      2),
+                  dialogueNext("Here, take this as a little thank-you. "
+                               "You've really helped me out!",
+                               -1, DialogueAction::CompleteQuest),
+              }},
+             {QuestStatus::Completed,
+              {
+                  dialogueNext("Oh, hello again! Things have been much quieter "
+                               "around here thanks to you.",
+                               1),
+                  dialogueNext("If you ever get tired of adventuring, you're "
+                               "always welcome to stop by the library!",
+                               -1),
 
-            // 4 - accept quest
-            DialogueNode{"Really? Thank you! Just take care of ten of the "
-                         "monsters nearby, and I should be able to move around "
-                         "more safely. Please be careful out there.",
-                         6},
+              }}},
+    };
+    dialogues[sandy.type] = sandyClearQuest;
+}
 
-            // 5 - explain quest objective
-            DialogueNode{
-                "Just take care of ten of the monsters nearby. I would "
-                "do it myself, but I'm afraid I'm not much of a fighter.",
-                6},
-
-            // 6 - follow-up after explaining
-            DialogueNode{"Once you're done, come back and find me!", -1},
-
-            // 7 - decline quest
-            DialogueNode{"Oh… that's alright. I understand. I'll just have to "
-                         "manage on my own for now.",
-                         8},
-
-            // 8 - farewell after declining
-            DialogueNode{
-                "Do let me know if you change your mind! And be careful "
-                "if you decide to leave. It's rather easy to lose your "
-                "way around here.",
-                -1},
-        }});
+void Game::initQuests() {
+    quests[QuestId::SandyClearMonsters] = {
+        QuestId::SandyClearMonsters,
+        QuestType::KillEnemies,
+        "Kill 10 Enemies",
+        1,
+        0,
+        QuestStatus::InActive,
+        1,
+    };
 }

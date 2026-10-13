@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Constants.hpp"
+#include "Dialogue.hpp"
 #include "entities/Collectable.hpp"
 #include "entities/Enemy.hpp"
 #include "entities/NPC.hpp"
@@ -11,8 +12,8 @@
 using namespace std;
 
 class Player;
-struct Dialogue;
 struct InventoryItem;
+struct Quest;
 
 enum class Align { Center, Start, End };
 
@@ -34,6 +35,9 @@ struct PanelStyle {
     float padding = 50.0f;
     float width = WINDOW_WIDTH - margin * 2;
     float height = WINDOW_HEIGHT - margin * 2;
+    float roundness = 0.1f;
+    int segments = 4;
+    float opacity = 0.9f;
 };
 
 struct InventoryStyle : PanelStyle {
@@ -41,58 +45,72 @@ struct InventoryStyle : PanelStyle {
     float slotGap = 20.0f;
     float gridTopOffset = 100.0f;
     float gap = 50.0f; // column gap
-    float fontSize = 20.0f;
+    float fontSize = 16.0f;
 
     SlotStyle slot{.roundness = 0.26f, .segments = 0};
 };
 
-struct DialogStyle : PanelStyle {};
+struct DialogueStyle : PanelStyle {
+    float avatarScale = 7.0f;
+    float columnGap = 20.0f;
+    float nameGap = 20.0f;
+    float nameFontSize = 64.0f;
+    float textFontSize = 32.0f;
+    float choiceHeight = 40.0f;
+    float choiceGap = 15.0f;
+    float bottomPadding = 10.0f;
+};
+
+struct QuestStyle {
+    float marginLeft = 30.0f;
+    float marginTop = 100.0f;
+    float padding = 12.0f;
+    float height = 75.0f;
+};
 
 struct HotbarStyle {
     float slotSize = 50.0f;
     float slotGap = 20.0f;
     float rightMargin = 30.0f;
     float bottomMargin = 30.0f;
-    float fontSize = 20.0f;
+    float fontSize = 16.0f;
     SlotStyle slot{.roundness = 0.26f, .segments = 0};
 };
 
 struct TopbarStyle {
     float margin = 30.0f;
+    float width = 250.0f;
     float padding = 10.0f;
-    float profileRadius = 30.0f;
-    float gap = 10.0f;
-    float profileScale = 1.5f;
-    float heartSpacing = 32.0f;
+    float gap = 4.0f;
     int heartCount = 5;
     float roundness = 0.3f;
     int segments = 0;
     float fillOpacity = 0.4f;
-    float profileFillOpacity = 0.4f;
-    Color iconColor = WHITE;
 };
 
 struct UIStyle {
     InventoryStyle inventory;
     HotbarStyle hotbar;
     TopbarStyle topbar;
-    DialogStyle dialog;
+    DialogueStyle dialogue;
     PanelStyle panel;
+    QuestStyle quest;
     Vector2 quantityOffset = {8.0f, 8.0f};
     float quantitySpacing = 2.0f;
 };
 
 struct TextStyle {
-    float fontSize = 20.0f;
-    float spacing = 2.0f;
+    float fontSize = 16.0f;
+    float spacing = 3.0f;
     Color colour = WHITE;
     Align horizontal = Align::Start;
     Align vertical = Align::Start;
 };
 
 namespace Palette {
-constexpr Color Background = {37, 43, 40, 255};   // #252B28
-constexpr Color Text = {216, 208, 184, 255};      // #D8D0B8
+constexpr Color Charcoal = {37, 43, 40, 255};     // #252B28
+constexpr Color Parchment = {216, 208, 184, 255}; // #D8D0B8
+constexpr Color FadedParchment = {216, 208, 184, 102};
 constexpr Color MossGreen = {105, 124, 104, 255}; // #697C68
 constexpr Color Brown = {156, 118, 91, 255};      // #9C765B
 constexpr Color MutedRed = {166, 95, 89, 255};    // #A65F59
@@ -103,7 +121,9 @@ class UI {
   private:
     inline static constexpr UIStyle STYLES{};
 
-    static Font font;
+    static Font fontSmall;
+    static Font fontMedium;
+    static Font fontLarge;
 
     vector<Texture2D> hearts;
     map<CollectableType, ItemIcon> itemAssets;
@@ -130,8 +150,9 @@ class UI {
     void renderEnemyHealth(const Enemy &enemy);
     void renderNPCName(const NPC &npc);
     void renderInventory(const vector<InventoryItem> &inventory);
-    void renderDialogue(const Dialogue &dialogue, const NPC &npc, int lineIndex,
+    void renderDialogue(const DialogueNode &node, const NPC &npc,
                         int selectedOption);
+    void renderQuest(const Quest &quest);
 
     Rectangle getInventorySlotRect(int index);
 };

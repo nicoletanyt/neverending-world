@@ -7,9 +7,10 @@
 #include <format>
 #include <raylib.h>
 #include <string>
-#include <variant>
 
-Font UI::font = {};
+Font UI::fontSmall = {};
+Font UI::fontMedium = {};
+Font UI::fontLarge = {};
 
 void UI::loadAssets() {
     const vector<string> heartSrc = {
@@ -28,42 +29,82 @@ void UI::loadAssets() {
 
     profileAsset = LoadTexture("assets/profile.png");
 
-    font = LoadFontEx("assets/fonts/JetBrainsMono-Medium.ttf", 96, 0, 250);
-    SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
+    const char *fontFile = "assets/fonts/PixelifySans-SemiBold.ttf";
+    fontSmall = LoadFontEx(fontFile, 16, 0, 250);
+    fontMedium = LoadFontEx(fontFile, 32, 0, 250);
+    fontLarge = LoadFontEx(fontFile, 64, 0, 250);
+    SetTextureFilter(fontSmall.texture, TEXTURE_FILTER_POINT);
+    SetTextureFilter(fontMedium.texture, TEXTURE_FILTER_POINT);
+    SetTextureFilter(fontLarge.texture, TEXTURE_FILTER_POINT);
 }
 
 void UI::renderTopbar(Player &player) {
     const auto &style = STYLES.topbar;
-    const float heartWidth =
-        (style.heartCount - 1) * style.heartSpacing + hearts[0].width;
-    const Rectangle topbar = {style.margin, style.margin,
-                              style.padding * 2 + style.profileRadius * 2 +
-                                  style.gap + heartWidth,
-                              style.padding * 2 + style.profileRadius * 2};
-    DrawRectangleRounded(topbar, style.roundness, style.segments,
-                         Fade(Palette::Text, style.fillOpacity));
+    const float iconSize =
+        (style.width - style.padding * 2 - style.gap * style.heartCount) /
+        (style.heartCount + 1);
+    const Rectangle topbar = {style.margin, style.margin, style.width,
+                              style.padding * 2 + iconSize};
+    DrawRectangleRounded(topbar, .3f, 0, Palette::FadedParchment);
 
-    const Vector2 center = {topbar.x + style.padding + style.profileRadius,
+    const Vector2 center = {topbar.x + style.padding + iconSize / 2.0f,
                             topbar.y + topbar.height / 2.0f};
-    DrawCircleV(center, style.profileRadius,
-                Fade(Palette::Background, style.profileFillOpacity));
+    DrawCircleV(center, iconSize / 2.0f,
+                Fade(Palette::Charcoal, style.fillOpacity));
+    const float profileScale =
+        iconSize / max(profileAsset.width, profileAsset.height);
     const Vector2 profilePos = {
-        center.x - profileAsset.width * style.profileScale / 2.0f,
-        center.y - profileAsset.height * style.profileScale / 2.0f};
-    DrawTextureEx(profileAsset, profilePos, 0, style.profileScale,
-                  style.iconColor);
+        center.x - profileAsset.width * profileScale / 2.0f,
+        center.y - profileAsset.height * profileScale / 2.0f};
+    DrawTextureEx(profileAsset, profilePos, 0, profileScale, WHITE);
 
     int filled = player.health / 10;
     for (int i = 0; i < style.heartCount; i++) {
         int heartIndex = min(filled, 2);
-        const Vector2 heartPos = {center.x + style.profileRadius + style.gap +
-                                      i * style.heartSpacing,
-                                  center.y - hearts[heartIndex].height / 2.0f};
-        DrawTextureV(hearts[heartIndex], heartPos, style.iconColor);
+        const Texture2D &heart = hearts[heartIndex];
+        const float heartScale = iconSize / max(heart.width, heart.height);
+        const Vector2 heartPos = {center.x + (i + 1) * (iconSize + style.gap) -
+                                      heart.width * heartScale / 2.0f,
+                                  center.y - heart.height * heartScale / 2.0f};
+        DrawTextureEx(heart, heartPos, 0, heartScale, WHITE);
         filled = max(0, filled - 2);
     }
 }
 
+void UI::renderQuest(const Quest &quest) {
+    const auto &style = STYLES.quest;
+
+    const Rectangle container = {style.marginLeft, style.marginTop,
+                                 STYLES.topbar.width, style.height};
+
+    DrawRectangleRounded(container, 0.15f, 8, Fade(Palette::Parchment, .8f));
+    DrawRectangleRoundedLinesEx(container, 0.15f, 8, 3.0f, Palette::Brown);
+
+    const Rectangle headingRect = {container.x + style.padding, container.y + 8,
+                                   container.width - style.padding * 2, 25};
+    renderTextInBounds("Active Quest", headingRect,
+                       {.fontSize = 22.0f,
+                        .colour = Palette::Charcoal,
+                        .horizontal = Align::Start,
+                        .vertical = Align::Center});
+    const Rectangle questRect = {container.x + style.padding, container.y + 37,
+                                 container.width - style.padding * 2, 25};
+
+    string progressText;
+    // TODO: store quests phases with target, progress, description each?
+    if (quest.status == QuestStatus::ReadyToReport) {
+        progressText = "[0/1] Report back";
+    } else {
+
+        progressText = "[" + to_string(quest.progress) + "/" +
+                       to_string(quest.target) + "] " + quest.description;
+    }
+    renderTextInBounds(progressText, questRect,
+                       {.fontSize = 16.0f,
+                        .colour = Palette::Brown,
+                        .horizontal = Align::Start,
+                        .vertical = Align::Center});
+}
 void UI::renderHotbar(const vector<InventoryItem> &inventory) {
     const auto &style = STYLES.hotbar;
     for (int i = 0; i < HOTBAR_SLOTS; ++i) {
@@ -72,7 +113,7 @@ void UI::renderHotbar(const vector<InventoryItem> &inventory) {
 
         if (i < static_cast<int>(inventory.size())) {
             renderInventoryItem(inventory[i], slot, style.fontSize,
-                                Palette::Background);
+                                Palette::Charcoal);
         }
     }
 }
@@ -83,7 +124,7 @@ void UI::renderSlot(const Rectangle &rect, const SlotStyle &style,
                          Fade(fillColor, style.fillOpacity));
     DrawRectangleRoundedLinesEx(rect, style.roundness, style.segments,
                                 style.borderWidth,
-                                Fade(Palette::Text, style.borderOpacity));
+                                Fade(Palette::Parchment, style.borderOpacity));
 }
 
 Rectangle UI::getHotbarSlotRect(int index) const {
@@ -107,70 +148,71 @@ void UI::renderInventoryItem(const InventoryItem &item, const Rectangle &slot,
 
     DrawTextureEx(texture, texturePos, 0, scale, WHITE);
     DrawTextEx(
-        font, text.c_str(),
+        fontSmall, text.c_str(),
         {slot.x + STYLES.quantityOffset.x, slot.y + STYLES.quantityOffset.y},
         fontSize, STYLES.quantitySpacing, colour);
 }
 
-void UI::renderDialogue(const Dialogue &dialogue, const NPC &npc, int lineIndex,
+void UI::renderDialogue(const DialogueNode &node, const NPC &npc,
                         int selectedOption) {
-    const auto &style = STYLES.dialog;
+    const auto &style = STYLES.dialogue;
     DrawRectangleRounded(
-        {style.margin, style.margin, style.width, style.height}, .1f, 4,
-        Fade(Palette::Background, 0.9f));
+        {style.margin, style.margin, style.width, style.height},
+        style.roundness, style.segments, Fade(Palette::Charcoal, style.opacity));
     const Rectangle contentRect = {
         style.margin + style.padding, style.margin + style.padding,
         style.width - style.padding * 2, style.height - style.padding * 2};
     Texture2D asset = npc.avatars[npc.type - 1];
-    const float scale = 7, colGap = 20.0f;
+    const float scale = style.avatarScale;
     const float leftColWidth = asset.width * scale;
 
     DrawTextureEx(asset, {contentRect.x, contentRect.y}, 0, scale, WHITE);
 
     renderTextInBounds(
         npc.name,
-        {contentRect.x, contentRect.y + asset.height * scale + 20.0f,
+        {contentRect.x, contentRect.y + asset.height * scale + style.nameGap,
          leftColWidth,
          contentRect.height - contentRect.y - asset.height * scale},
-        {.fontSize = 50.0f,
-         .colour = Palette::Text,
+        {.fontSize = style.nameFontSize,
+         .colour = Palette::Parchment,
          .horizontal = Align::Center});
 
     const Rectangle dialogueRect = {
-        contentRect.x + leftColWidth + colGap, contentRect.y,
+        contentRect.x + leftColWidth + style.columnGap, contentRect.y,
         contentRect.width - leftColWidth, contentRect.height};
-    const DialogueElement &element = dialogue.elements[lineIndex];
-    if (const auto *node = std::get_if<DialogueNode>(&element)) {
-        renderTextInBounds(node->text, dialogueRect,
-                           {
-                               .fontSize = 30.0f,
-                               .colour = Palette::Text,
-                           },
-                           true);
-        renderTextInBounds(" > Next", dialogueRect,
-                           {
-                               .fontSize = 30.0f,
-                               .colour = Palette::FogGrey,
-                               .horizontal = Align::Start,
-                               .vertical = Align::End,
-                           },
-                           true);
-    } else if (const auto *choice = std::get_if<DialogueChoice>(&element)) {
-        for (int i = 0; i < (int)choice->options.size(); ++i) {
-            const string chocieText = "> " + choice->options[i].text;
-            Color colour =
-                selectedOption == i ? Palette::FogGrey : Palette::Text;
-            renderTextInBounds(chocieText,
 
-                               {dialogueRect.x, dialogueRect.y + 80.0f * i,
-                                dialogueRect.width,
-                                dialogueRect.height - 80.0f * i},
-                               {
-                                   .fontSize = 30.0f,
-                                   .colour = colour,
-                               },
-                               true);
-        }
+    renderTextInBounds(node.text, dialogueRect,
+                       {
+                            .fontSize = style.textFontSize,
+                           .colour = Palette::Parchment,
+                       },
+                       true);
+
+    const int choiceCount = static_cast<int>(node.choices.size());
+    const float totalHeight =
+        choiceCount * style.choiceHeight + (choiceCount - 1) * style.choiceGap;
+
+    const float startY =
+        dialogueRect.y + dialogueRect.height - totalHeight - style.bottomPadding;
+
+    for (int i = 0; i < choiceCount; ++i) {
+        const string choiceText = "> " + node.choices[i].text;
+
+        const Color colour =
+            selectedOption == i ? Palette::FogGrey : Palette::Parchment;
+
+        const Rectangle choiceRect = {dialogueRect.x,
+                                      startY +
+                                          i * (style.choiceHeight + style.choiceGap),
+                                      dialogueRect.width, style.choiceHeight};
+
+        renderTextInBounds(choiceText, choiceRect,
+                           {
+                                .fontSize = style.textFontSize,
+                               .colour = colour,
+                               .horizontal = Align::End,
+                           },
+                           true);
     }
 }
 
@@ -181,7 +223,7 @@ void UI::renderEnemyHealth(const Enemy &enemy) {
 
     Rectangle outer = {enemy.pos.x + offset.x, enemy.pos.y - offset.y, size.x,
                        size.y};
-    DrawRectangleRounded(outer, 0.2f, 4, Fade(Palette::Text, 0.8f));
+    DrawRectangleRounded(outer, 0.2f, 4, Fade(Palette::Parchment, 0.8f));
 
     size.x = (enemy.health / enemy.maxHealth) * 50.0f;
     Rectangle inner = {enemy.pos.x + offset.x + padding,
@@ -194,18 +236,18 @@ void UI::renderNPCName(const NPC &npc) {
     renderTextInBounds(
         npc.name, (Rectangle){npc.pos.x, npc.pos.y - 15.0f, npc.size.x, 20.0f},
         (TextStyle){
-            .fontSize = 25.0f,
-            .colour = Palette::Text,
+            .fontSize = 20.0f,
+            .colour = Palette::Parchment,
             .horizontal = Align::Center,
             .vertical = Align::Center,
         });
 
     Rectangle keyRect = {npc.pos.x + 40.0f, npc.pos.y + 40.0f, 20.0f, 20.0f};
-    DrawRectangleRounded(keyRect, 0.3f, 8, Fade(Palette::Background, 0.4f));
+    DrawRectangleRounded(keyRect, 0.3f, 8, Fade(Palette::Charcoal, 0.4f));
     renderTextInBounds("Q", keyRect,
                        (TextStyle){
-                           .fontSize = 15.0f,
-                           .colour = Palette::Text,
+                           .fontSize = 16.0f,
+                           .colour = Palette::Parchment,
                            .horizontal = Align::Center,
                            .vertical = Align::Center,
                        });
@@ -214,9 +256,9 @@ void UI::renderNPCName(const NPC &npc) {
 void UI::renderInventory(const vector<InventoryItem> &inventory) {
     const auto &style = STYLES.inventory;
     DrawRectangleRounded(
-        {style.margin, style.margin, style.width, style.height}, 0.1f, 4,
-        Fade(Palette::Background, 0.8f));
-    TextStyle inventoryTextStyle = {.fontSize = 50.0f,
+        {style.margin, style.margin, style.width, style.height},
+        style.roundness, style.segments, Fade(Palette::Charcoal, style.opacity));
+    TextStyle inventoryTextStyle = {.fontSize = 64.0f,
                                     .colour = Palette::Brown,
                                     .horizontal = Align::Center,
                                     .vertical = Align::Start};
@@ -234,7 +276,7 @@ void UI::renderInventory(const vector<InventoryItem> &inventory) {
 
         if (i < static_cast<int>(inventory.size())) {
             renderInventoryItem(inventory[i], slot, style.fontSize,
-                                Palette::Background);
+                                Palette::Charcoal);
         }
     }
 
@@ -260,8 +302,8 @@ void UI::renderDetailItem(const InventoryItem &item,
     const string name = collectableTypeToString(item.type);
     const string text = format("{}: {}", name, item.quantity);
     renderTextInBounds(text.c_str(), detailRect,
-                       (TextStyle){.fontSize = 30.0f,
-                                   .colour = Palette::Text,
+                       (TextStyle){.fontSize = 32.0f,
+                                   .colour = Palette::Parchment,
                                    .horizontal = Align::Center,
                                    .vertical = Align::Start});
     y += 100.0f;
@@ -283,8 +325,8 @@ void UI::renderDetailItem(const InventoryItem &item,
         DrawRectangleRounded(consumeBtn, 0.2f, 8,
                              Fade(Palette::MossGreen, 0.4f));
         renderTextInBounds("Consume", consumeBtn,
-                           (TextStyle){.fontSize = 20.0f,
-                                       .colour = Palette::Text,
+                           (TextStyle){.fontSize = 16.0f,
+                                       .colour = Palette::Parchment,
                                        .horizontal = Align::Center,
                                        .vertical = Align::Center});
     }
@@ -303,6 +345,11 @@ Rectangle UI::getInventorySlotRect(int index) {
 
 void UI::renderTextInBounds(const string &text, Rectangle bounds,
                             TextStyle style, bool textWrap) {
+    // Midpoints between the available font sizes: 16, 32, and 64.
+    const Font &font = style.fontSize < 24.0f   ? fontSmall
+                       : style.fontSize < 48.0f ? fontMedium
+                                                : fontLarge;
+    style.fontSize = static_cast<float>(font.baseSize);
     Vector2 textPos;
     const Vector2 textSize =
         MeasureTextEx(font, text.c_str(), style.fontSize, style.spacing);
@@ -339,7 +386,8 @@ void UI::renderTextInBounds(const string &text, Rectangle bounds,
 
     const float endX = bounds.x + bounds.width;
     const float spaceWidth =
-        MeasureTextEx(font, " ", style.fontSize, style.spacing).x;
+        MeasureTextEx(font, " ", style.fontSize, style.spacing).x +
+        style.spacing + 3.0f;
     Vector2 currentPos = {textPos.x, textPos.y};
     string word = "";
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Dialogue.hpp"
+#include "Quest.hpp"
 #include "UI.hpp"
 #include "entities/Collectable.hpp"
 #include "entities/Enemy.hpp"
@@ -10,7 +12,6 @@
 #include <map>
 #include <raylib.h>
 #include <set>
-#include <variant>
 #include <vector>
 
 enum class AssetTypes { Background, Hearts };
@@ -19,21 +20,6 @@ enum class GameMode { Playing, Inventory, Dialog };
 struct InventoryItem {
     CollectableType type;
     int quantity;
-};
-
-struct DialogueNode {
-    string text;
-    int nextIndex = -1;
-};
-
-struct DialogueChoice {
-    vector<DialogueNode> options;
-};
-
-using DialogueElement = variant<DialogueNode, DialogueChoice>;
-
-struct Dialogue {
-    const vector<DialogueElement> elements;
 };
 
 class Game {
@@ -52,10 +38,13 @@ class Game {
     map<Location, vector<Collectable>> collectables;
 
     GameMode mode = GameMode::Playing;
-    map<int, Dialogue> dialogues;
 
-    Dialogue *activeDialog = nullptr;
+    map<int, QuestDialogue> dialogues; // NPC id: Dialogue
+    QuestDialogue *activeDialog = nullptr;
     NPC *activeNPC = nullptr;
+
+    Quest *activeQuest = nullptr;
+    map<QuestId, Quest> quests;
 
     int selectedOption = 0; // for dialog
     int lineIndex = 0;      // for dialog
@@ -78,7 +67,10 @@ class Game {
     void removeFromInventory(const CollectableType &type);
     vector<Collectable>::iterator getCollectable();
 
-    void createNPCs();
+    void interactWithNPC(NPC &npc);
+
+    void initNPC();
+    void initQuests();
 
   public:
     Game() {
@@ -97,7 +89,8 @@ class Game {
         location = {0, 0};
         visited.insert(location);
         trees[location] = {};
-        createNPCs();
+        initNPC();
+        initQuests();
     }
 
     void update();
