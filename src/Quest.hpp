@@ -5,8 +5,9 @@
 
 using namespace std;
 
+// TODO: remove completed
 enum class QuestStatus { InActive, Active, ReadyToReport, Completed };
-enum class ObjectiveType { KillEnemies, FindNPC, Report };
+enum class ObjectiveType { KillEnemies, FindNPC, Report, BuyItem };
 enum class QuestId { ClearMonsters, FindMap };
 
 struct QuestObjective {

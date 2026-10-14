@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Quest.hpp"
+#include "entities/NPC.hpp"
 #include <map>
 #include <string>
 #include <vector>
@@ -23,9 +24,11 @@ struct DialogueChoice {
 };
 
 using Dialogue = vector<DialogueNode>;
+
 struct QuestDialogue {
     QuestId questId;
     map<QuestStatus, Dialogue> dialogues;
+    NPCId npcId;
 };
 
 inline DialogueNode dialogueNext(string text, int index,

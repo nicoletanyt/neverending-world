@@ -39,12 +39,13 @@ class Game {
 
     GameMode mode = GameMode::Playing;
 
-    map<int, QuestDialogue> dialogues; // NPC id: Dialogue
+    map<QuestId, Quest> quests;
+    map<QuestId, QuestDialogue> questDialogues;
+    vector<QuestId> completedQuests;
+
     QuestDialogue *activeDialog = nullptr;
     NPC *activeNPC = nullptr;
-
     Quest *activeQuest = nullptr;
-    map<QuestId, Quest> quests;
 
     int selectedOption = 0; // for dialog
     int lineIndex = 0;      // for dialog

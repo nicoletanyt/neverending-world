@@ -1,9 +1,11 @@
 #include "Game.hpp"
 #include "Constants.hpp"
 #include "Dialogue.hpp"
+#include "DialogueContent.hpp"
 #include "Quest.hpp"
 #include "UI.hpp"
 #include "entities/Collectable.hpp"
+#include "entities/NPC.hpp"
 #include "raylib.h"
 #include "utils.hpp"
 #include <algorithm>
@@ -135,11 +137,13 @@ void Game::update() {
                 }
                 case DialogueAction::CompleteQuest: {
                     activeQuest->onCompletion();
-                    cout << "Quest Completed!\n";
+                    completedQuests.push_back(activeQuest->id);
                     activeQuest = nullptr;
+                    cout << "Quest Completed!\n";
                     break;
                 }
                 case DialogueAction::None:
+                    // activeQuest->status = QuestStatus::InActive;
                     break;
                 }
                 if (lineIndex == -1)
@@ -247,7 +251,7 @@ void Game::render() {
 
     ui.renderTopbar(player);
     ui.renderHotbar(inventory);
-    if (activeQuest)
+    if (activeQuest && activeQuest->status != QuestStatus::Completed)
         ui.renderQuest(*activeQuest);
 
     for (const Enemy &enemy : enemies[location]) {
@@ -258,7 +262,7 @@ void Game::render() {
         float distance = calculateDistance(player.pos, npc.pos);
         if (distance < 64) {
             ui.renderNPCName(npc);
-            if (IsKeyDown(KEY_Q))
+            if (IsKeyPressed(KEY_Q))
                 interactWithNPC(npc);
         }
     }
@@ -276,102 +280,41 @@ void Game::render() {
 
 void Game::interactWithNPC(NPC &npc) {
     mode = GameMode::Dialog;
-    activeDialog = &dialogues.at(npc.type);
     activeNPC = &npc;
     lineIndex = 0;
+    // progress to next quest
+    if (!activeQuest) {
+        optional<QuestId> prevId = nullopt;
+        if (!completedQuests.empty())
+            prevId = completedQuests.back();
+        optional<QuestId> nextId = npc.getNextQuest(prevId);
+        if (nextId) {
+            activeDialog = &questDialogues.at(*nextId);
+            cout << "New Quest\n";
+        } else {
+            // TODO: HANDLE NPC DEFAULT DIALOGUE
+            cout << "TODO: Default Dialogue\n";
+        }
+    } else {
+        // TODO: HANDLE NPC DEFAULT DIALOGUE
+        cout << "TODO: Default Dialogue\n";
+    }
 }
 
 void Game::initNPC() {
-    const NPC sandy = {1, (Vector2){700.0f, 150.0f}, "Sandy"};
-    npcs[location].push_back(sandy);
-
-    Dialogue sandyIntro{
-        dialogueNext("Oh! Hello there. I'm Sandy. I look after the "
-                     "library nearby… or, well, I try to.",
-                     1),
-        dialogueNext("There are monsters wandering around the area, "
-                     "and I can't exactly fight them myself.",
-                     2),
-
-        {"Would you mind helping me clear them out? I'd really "
-         "appreciate it.",
-         {
-             {"Sure, I'll help!", 3},
-             {"What do I need to do?", 4},
-             {"No thanks.", 6},
-         }},
-        dialogueNext("Really? Thank you! Just take care of ten of the "
-                     "monsters nearby, and I should be able to move around "
-                     "more safely. Please be careful out there.",
-                     5),
-        dialogueNext("Just take care of ten of the monsters nearby. I "
-                     "would "
-                     "do it myself, but I'm afraid I'm not much of a "
-                     "fighter.",
-                     5),
-        dialogueNext("Once you're done, come back and find me!", -1,
-                     DialogueAction::AcceptQuest),
-        dialogueNext("Oh… that's alright. I understand. I'll just have to "
-                     "manage on my own for now.",
-                     7),
-        dialogueNext("Do let me know if you change your mind! And be "
-                     "careful "
-                     "if you decide to leave. It's rather easy to lose "
-                     "your "
-                     "way around here.",
-                     -1),
-    };
-
-    QuestDialogue sandyClearQuest{
-        .questId = QuestId::ClearMonsters,
-        .dialogues =
-            {{QuestStatus::InActive, sandyIntro},
-             {
-                 QuestStatus::Active,
-                 {
-                     {"Oh, you're back! How's the monster hunting going?",
-                      {
-                          {"Still working on it.", 1},
-                          {"Remind me what I need to do?", 2},
-                      }},
-                     dialogueNext(
-                         "No rush! Well… maybe a little. Just be careful "
-                         "out there, alright?",
-                         -1),
-                     dialogueNext("Ten monsters, that's all! Come find me when "
-                                  "you're done. I'll be right here!",
-                                  -1),
-                 },
-             },
-             {QuestStatus::ReadyToReport,
-              {
-
-                  dialogueNext("You're back! And in one piece! Does that mean "
-                               "you've taken care of those monsters?",
-                               1),
-                  dialogueNext(
-                      "All ten of them? That's incredible! I can finally "
-                      "get back to looking after the library.",
-                      2),
-                  dialogueNext("Here, take this as a little thank-you. "
-                               "You've really helped me out!",
-                               -1, DialogueAction::CompleteQuest),
-              }},
-             {QuestStatus::Completed,
-              {
-                  dialogueNext("Oh, hello again! Things have been much quieter "
-                               "around here thanks to you.",
-                               1),
-                  dialogueNext("If you ever get tired of adventuring, you're "
-                               "always welcome to stop by the library!",
-                               -1),
-
-              }}},
-    };
-    dialogues[sandy.type] = sandyClearQuest;
+    npcs[location].emplace_back(
+        NPCId::Sandy, 1, (Vector2){700.0f, 150.0f}, "Sandy",
+        (vector<QuestId>){QuestId::ClearMonsters, QuestId::FindMap});
+    npcs[{5, 8}].emplace_back(NPCId::Rowan, 1, (Vector2){500.0f, 500.0f},
+                              "Rowan");
 }
 
 void Game::initQuests() {
+    DialogueContent content;
+    questDialogues.emplace(QuestId::ClearMonsters,
+                           content.makeClearMonsterDialogue());
+    questDialogues.emplace(QuestId::FindMap, content.makeFindMapDialogue());
+
     quests[QuestId::ClearMonsters] = {
         .id = QuestId::ClearMonsters,
         .name = "Clear Surroundings",
@@ -381,6 +324,7 @@ void Game::initQuests() {
                 {
                     .type = ObjectiveType::KillEnemies,
                     .description = "Kill 10 Enemies",
+                    // TODO: change to 10 if not testing
                     .target = 1,
                     .progress = 0,
                 },
@@ -393,5 +337,35 @@ void Game::initQuests() {
             },
         .onCompletion = [this]() { addToInventory(CollectableType::Coin, 10); },
         .npcId = 1,
+    };
+    quests[QuestId::FindMap] = {
+        .id = QuestId::FindMap,
+        .name = "Find a Map",
+        .status = QuestStatus::InActive,
+        .objectives =
+            {
+                {
+                    .type = ObjectiveType::FindNPC,
+                    .description =
+                        "Find the travelling merchant that sells maps.",
+                    .target = 1,
+                    .progress = 0,
+                },
+                {
+                    .type = ObjectiveType::BuyItem,
+                    .description = "Buy the map from the merchant.",
+                    .target = 1,
+                    .progress = 0,
+                },
+                {
+                    .type = ObjectiveType::Report,
+                    .description =
+                        "Find Sandy and tell her about the good news.",
+                    .target = 1,
+                    .progress = 0,
+                },
+            },
+        .onCompletion = [this]() { addToInventory(CollectableType::Coin, 10); },
+        .npcId = 2,
     };
 }

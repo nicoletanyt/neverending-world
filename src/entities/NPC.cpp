@@ -1,8 +1,10 @@
 #include "NPC.hpp"
 #include "../utils.hpp"
 #include "Player.hpp"
+#include <algorithm>
 #include <filesystem>
 #include <map>
+#include <optional>
 #include <raylib.h>
 #include <regex>
 
@@ -57,4 +59,15 @@ Rectangle NPC::getHitBox() const { return {pos.x + 16, pos.y + 7, 32, 52}; }
 void NPC::render() const {
     Texture2D texture = assets[type][direction][static_cast<int>(frame)];
     DrawTextureV(texture, pos, WHITE);
+}
+
+optional<QuestId> NPC::getNextQuest(optional<QuestId> current) {
+    if (quests.empty())
+        return nullopt;
+    if (!current)
+        return quests[0];
+    auto it = find(quests.begin(), quests.end(), *current);
+    if (it == quests.end() || ++it == quests.end())
+        return nullopt;
+    return *it;
 }
