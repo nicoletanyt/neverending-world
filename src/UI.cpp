@@ -1,6 +1,7 @@
 #include "UI.hpp"
 #include "Constants.hpp"
 #include "Game.hpp"
+#include "Quest.hpp"
 #include "entities/Collectable.hpp"
 #include "entities/Player.hpp"
 #include <algorithm>
@@ -73,6 +74,7 @@ void UI::renderTopbar(Player &player) {
 
 void UI::renderQuest(const Quest &quest) {
     const auto &style = STYLES.quest;
+    const QuestObjective &objective = quest.objectives[quest.current];
 
     const Rectangle container = {style.marginLeft, style.marginTop,
                                  STYLES.topbar.width, style.height};
@@ -82,28 +84,26 @@ void UI::renderQuest(const Quest &quest) {
 
     const Rectangle headingRect = {container.x + style.padding, container.y + 8,
                                    container.width - style.padding * 2, 25};
-    renderTextInBounds("Active Quest", headingRect,
+    renderTextInBounds(quest.name, headingRect,
                        {.fontSize = 22.0f,
                         .colour = Palette::Charcoal,
                         .horizontal = Align::Start,
-                        .vertical = Align::Center});
+                        .vertical = Align::Center},
+                       true);
     const Rectangle questRect = {container.x + style.padding, container.y + 37,
                                  container.width - style.padding * 2, 25};
 
-    string progressText;
-    // TODO: store quests phases with target, progress, description each?
-    if (quest.status == QuestStatus::ReadyToReport) {
-        progressText = "[0/1] Report back";
-    } else {
+    string progressText = "[" + to_string(objective.progress) + "/" +
+                          to_string(objective.target) + "] " +
+                          objective.description;
 
-        progressText = "[" + to_string(quest.progress) + "/" +
-                       to_string(quest.target) + "] " + quest.description;
-    }
+    // TODO: create a measureTextInBounds then load height responsively
     renderTextInBounds(progressText, questRect,
                        {.fontSize = 16.0f,
                         .colour = Palette::Brown,
                         .horizontal = Align::Start,
-                        .vertical = Align::Center});
+                        .vertical = Align::Center},
+                       true);
 }
 void UI::renderHotbar(const vector<InventoryItem> &inventory) {
     const auto &style = STYLES.hotbar;
@@ -158,7 +158,8 @@ void UI::renderDialogue(const DialogueNode &node, const NPC &npc,
     const auto &style = STYLES.dialogue;
     DrawRectangleRounded(
         {style.margin, style.margin, style.width, style.height},
-        style.roundness, style.segments, Fade(Palette::Charcoal, style.opacity));
+        style.roundness, style.segments,
+        Fade(Palette::Charcoal, style.opacity));
     const Rectangle contentRect = {
         style.margin + style.padding, style.margin + style.padding,
         style.width - style.padding * 2, style.height - style.padding * 2};
@@ -183,7 +184,7 @@ void UI::renderDialogue(const DialogueNode &node, const NPC &npc,
 
     renderTextInBounds(node.text, dialogueRect,
                        {
-                            .fontSize = style.textFontSize,
+                           .fontSize = style.textFontSize,
                            .colour = Palette::Parchment,
                        },
                        true);
@@ -192,8 +193,8 @@ void UI::renderDialogue(const DialogueNode &node, const NPC &npc,
     const float totalHeight =
         choiceCount * style.choiceHeight + (choiceCount - 1) * style.choiceGap;
 
-    const float startY =
-        dialogueRect.y + dialogueRect.height - totalHeight - style.bottomPadding;
+    const float startY = dialogueRect.y + dialogueRect.height - totalHeight -
+                         style.bottomPadding;
 
     for (int i = 0; i < choiceCount; ++i) {
         const string choiceText = "> " + node.choices[i].text;
@@ -201,14 +202,13 @@ void UI::renderDialogue(const DialogueNode &node, const NPC &npc,
         const Color colour =
             selectedOption == i ? Palette::FogGrey : Palette::Parchment;
 
-        const Rectangle choiceRect = {dialogueRect.x,
-                                      startY +
-                                          i * (style.choiceHeight + style.choiceGap),
-                                      dialogueRect.width, style.choiceHeight};
+        const Rectangle choiceRect = {
+            dialogueRect.x, startY + i * (style.choiceHeight + style.choiceGap),
+            dialogueRect.width, style.choiceHeight};
 
         renderTextInBounds(choiceText, choiceRect,
                            {
-                                .fontSize = style.textFontSize,
+                               .fontSize = style.textFontSize,
                                .colour = colour,
                                .horizontal = Align::End,
                            },
@@ -257,7 +257,8 @@ void UI::renderInventory(const vector<InventoryItem> &inventory) {
     const auto &style = STYLES.inventory;
     DrawRectangleRounded(
         {style.margin, style.margin, style.width, style.height},
-        style.roundness, style.segments, Fade(Palette::Charcoal, style.opacity));
+        style.roundness, style.segments,
+        Fade(Palette::Charcoal, style.opacity));
     TextStyle inventoryTextStyle = {.fontSize = 64.0f,
                                     .colour = Palette::Brown,
                                     .horizontal = Align::Center,

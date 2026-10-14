@@ -6,17 +6,24 @@
 using namespace std;
 
 enum class QuestStatus { InActive, Active, ReadyToReport, Completed };
-enum class QuestType { KillEnemies };
-enum class QuestId { SandyClearMonsters };
+enum class ObjectiveType { KillEnemies, FindNPC, Report };
+enum class QuestId { ClearMonsters, FindMap };
 
-struct Quest {
-    QuestId id;
-    QuestType type;
+struct QuestObjective {
+    ObjectiveType type;
     string description;
     int target;
     int progress;
-    QuestStatus status;
-    function<void()> onCompletion;
+};
 
+struct Quest {
+    QuestId id;
+    string name;
+    QuestStatus status;
+
+    vector<QuestObjective> objectives;
+    int current = 0; // index of current objective
+
+    function<void()> onCompletion;
     int npcId;
 };

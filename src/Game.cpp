@@ -60,12 +60,19 @@ void Game::update() {
                 collectables[location].emplace_back(currEnemy->pos, type);
                 currEnemy = currentEnemies.erase(currEnemy);
                 // update quest
-                if (activeQuest &&
-                    activeQuest->type == QuestType::KillEnemies &&
-                    activeQuest->status == QuestStatus::Active) {
-                    activeQuest->progress++;
-                    if (activeQuest->progress == activeQuest->target) {
-                        activeQuest->status = QuestStatus::ReadyToReport;
+                if (activeQuest && activeQuest->status == QuestStatus::Active &&
+                    activeQuest->id == QuestId::ClearMonsters) {
+                    QuestObjective &objective =
+                        activeQuest->objectives[activeQuest->current];
+                    if (objective.type == ObjectiveType::KillEnemies) {
+                        objective.progress++;
+                    }
+                    if (objective.progress == objective.target) {
+                        activeQuest->current++;
+                        objective =
+                            activeQuest->objectives[activeQuest->current];
+                        if (objective.type == ObjectiveType::Report)
+                            activeQuest->status = QuestStatus::ReadyToReport;
                     }
                 }
             } else {
@@ -316,7 +323,7 @@ void Game::initNPC() {
     };
 
     QuestDialogue sandyClearQuest{
-        .questId = QuestId::SandyClearMonsters,
+        .questId = QuestId::ClearMonsters,
         .dialogues =
             {{QuestStatus::InActive, sandyIntro},
              {
@@ -365,14 +372,26 @@ void Game::initNPC() {
 }
 
 void Game::initQuests() {
-    quests[QuestId::SandyClearMonsters] = {
-        QuestId::SandyClearMonsters,
-        QuestType::KillEnemies,
-        "Kill 10 Enemies",
-        1,
-        0,
-        QuestStatus::InActive,
-        [this]() { addToInventory(CollectableType::Coin, 10); },
-        1,
+    quests[QuestId::ClearMonsters] = {
+        .id = QuestId::ClearMonsters,
+        .name = "Clear Surroundings",
+        .status = QuestStatus::InActive,
+        .objectives =
+            {
+                {
+                    .type = ObjectiveType::KillEnemies,
+                    .description = "Kill 10 Enemies",
+                    .target = 1,
+                    .progress = 0,
+                },
+                {
+                    .type = ObjectiveType::Report,
+                    .description = "Return back to Sandy",
+                    .target = 1,
+                    .progress = 0,
+                },
+            },
+        .onCompletion = [this]() { addToInventory(CollectableType::Coin, 10); },
+        .npcId = 1,
     };
 }
