@@ -9,6 +9,7 @@
 #include "raylib.h"
 #include "utils.hpp"
 #include <algorithm>
+#include <variant>
 #include <vector>
 
 void Game::update() {
@@ -108,11 +109,9 @@ void Game::update() {
 
         break;
     }
-    case GameMode::Dialog: {
-        const Dialogue &currentDialogue =
-            activeDialog->dialogues[activeQuest ? activeQuest->status
-                                                : QuestStatus::InActive];
-        const DialogueNode &node = currentDialogue[lineIndex];
+    case GameMode::Dialogue: {
+        Dialogue *currentDialogue = getCurrentDialogue();
+        DialogueNode &node = (*currentDialogue)[lineIndex];
 
         const int count = node.choices.size();
         if (count > 0) {
@@ -129,10 +128,14 @@ void Game::update() {
                 selectedOption = 0;
                 PlaySound(selectSound);
 
+                if (lineIndex == -1)
+                    mode = GameMode::Playing;
                 switch (node.choices[selectedOption].action) {
                 case DialogueAction::AcceptQuest: {
-                    activeQuest = &quests.at(activeDialog->questId);
-                    activeQuest->status = QuestStatus::Active;
+                    if (auto ptr = get_if<QuestDialogue *>(&activeDialog)) {
+                        activeQuest = &quests.at((*ptr)->questId);
+                        activeQuest->status = QuestStatus::Active;
+                    }
                     break;
                 }
                 case DialogueAction::CompleteQuest: {
@@ -143,14 +146,18 @@ void Game::update() {
                     break;
                 }
                 case DialogueAction::None:
-                    // activeQuest->status = QuestStatus::InActive;
+                    break;
+                case DialogueAction::OpenShop: {
+                    mode = GameMode::Shop;
                     break;
                 }
-                if (lineIndex == -1)
-                    mode = GameMode::Playing;
+                }
             }
         }
     }
+    case GameMode::Shop: {
+        break;
+    };
     }
 }
 
@@ -160,6 +167,7 @@ void Game::changeLocation() {
         generateTreeData();
         generateEnemyData();
     }
+    // cout << location.x << " " << location.y << "\n";
 }
 
 void Game::generateTreeData() {
@@ -270,16 +278,20 @@ void Game::render() {
     if (mode == GameMode::Inventory)
         ui.renderInventory(inventory);
 
-    if (mode == GameMode::Dialog) {
-        Dialogue &current =
-            activeDialog->dialogues[activeQuest ? activeQuest->status
-                                                : QuestStatus::InActive];
-        ui.renderDialogue(current[lineIndex], *activeNPC, selectedOption);
+    if (mode == GameMode::Dialogue) {
+        Dialogue *current = getCurrentDialogue();
+        if (current)
+            ui.renderDialogue((*current).at(lineIndex), *activeNPC,
+                              selectedOption);
+    }
+
+    if (mode == GameMode::Shop) {
+        ui.renderShop();
     }
 }
 
 void Game::interactWithNPC(NPC &npc) {
-    mode = GameMode::Dialog;
+    mode = GameMode::Dialogue;
     activeNPC = &npc;
     lineIndex = 0;
     // progress to next quest
@@ -292,12 +304,10 @@ void Game::interactWithNPC(NPC &npc) {
             activeDialog = &questDialogues.at(*nextId);
             cout << "New Quest\n";
         } else {
-            // TODO: HANDLE NPC DEFAULT DIALOGUE
-            cout << "TODO: Default Dialogue\n";
+            activeDialog = &npcDialogues.at(activeNPC->id);
         }
     } else {
-        // TODO: HANDLE NPC DEFAULT DIALOGUE
-        cout << "TODO: Default Dialogue\n";
+        activeDialog = &npcDialogues.at(activeNPC->id);
     }
 }
 
@@ -305,7 +315,8 @@ void Game::initNPC() {
     npcs[location].emplace_back(
         NPCId::Sandy, 1, (Vector2){700.0f, 150.0f}, "Sandy",
         (vector<QuestId>){QuestId::ClearMonsters, QuestId::FindMap});
-    npcs[{5, 8}].emplace_back(NPCId::Rowan, 1, (Vector2){500.0f, 500.0f},
+    // {2, -2}
+    npcs[{1, 0}].emplace_back(NPCId::Rowan, 2, (Vector2){500.0f, 500.0f},
                               "Rowan");
 }
 
@@ -314,6 +325,7 @@ void Game::initQuests() {
     questDialogues.emplace(QuestId::ClearMonsters,
                            content.makeClearMonsterDialogue());
     questDialogues.emplace(QuestId::FindMap, content.makeFindMapDialogue());
+    npcDialogues.emplace(NPCId::Rowan, content.makeShopDialogue());
 
     quests[QuestId::ClearMonsters] = {
         .id = QuestId::ClearMonsters,
@@ -346,8 +358,8 @@ void Game::initQuests() {
             {
                 {
                     .type = ObjectiveType::FindNPC,
-                    .description =
-                        "Find the travelling merchant that sells maps.",
+                    .description = "Find the travelling merchant "
+                                   "that sells maps.",
                     .target = 1,
                     .progress = 0,
                 },
@@ -359,8 +371,8 @@ void Game::initQuests() {
                 },
                 {
                     .type = ObjectiveType::Report,
-                    .description =
-                        "Find Sandy and tell her about the good news.",
+                    .description = "Find Sandy and tell her about "
+                                   "the good news.",
                     .target = 1,
                     .progress = 0,
                 },
@@ -368,4 +380,15 @@ void Game::initQuests() {
         .onCompletion = [this]() { addToInventory(CollectableType::Coin, 10); },
         .npcId = 2,
     };
+}
+
+Dialogue *Game::getCurrentDialogue() {
+    if (auto ptr = get_if<QuestDialogue *>(&activeDialog)) {
+        QuestDialogue *dialogue = *ptr;
+        return &dialogue->dialogues.at(activeQuest ? activeQuest->status
+                                                   : QuestStatus::InActive);
+    } else if (auto ptr = get_if<Dialogue *>(&activeDialog)) {
+        return *ptr;
+    }
+    return nullptr;
 }

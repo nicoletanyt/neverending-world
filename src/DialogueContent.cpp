@@ -239,3 +239,55 @@ QuestDialogue DialogueContent::makeFindMapDialogue() {
                 },
             .npcId = NPCId::Sandy};
 }
+Dialogue DialogueContent::makeShopDialogue() {
+    return {
+        // Node 0
+        dialogueNext("Well, howdy there, partner! Don't get many visitors "
+                     "this far out. Name's Rowan, travelling merchant "
+                     "extraordinaire! What brings ya around these parts?",
+                     1),
+
+        // Node 1
+        {"What can ol' Rowan do for ya?",
+         {
+             {"Show me your wares.", 2},
+             {"Got any advice?", 4},
+             {"Just passing through.", 6},
+         }},
+
+        // Node 2
+        dialogueNext("Well, you've come to the right fella! "
+                     "I've got maps, potions, and all sorts of goodies. "
+                     "If you've got the coin, I've got the goods!",
+                     3),
+
+        // Node 3
+        dialogueNext("Go on, take a gander! Everything's priced fair "
+                     "and square, partner!",
+                     -1, DialogueAction::OpenShop),
+
+        // Node 4
+        dialogueNext("Here's a little wisdom for ya: always keep a "
+                     "potion handy, and never trust a trail that looks "
+                     "too easy. Learned that one the hard way!",
+                     5),
+
+        // Node 5
+        {"Anything else, partner?",
+         {
+             {"Show me your wares.", 2},
+             {"That's all, thanks!", 7},
+         }},
+
+        // Node 6
+        dialogueNext("Ha! A fellow wanderer! I like your spirit, partner. "
+                     "Just don't go gettin' yourself lost out there. "
+                     "Happy trails!",
+                     -1),
+
+        // Node 7
+        dialogueNext("Pleasure meetin' ya, partner! Don't be a stranger now. "
+                     "Happy trails!",
+                     -1),
+    };
+}

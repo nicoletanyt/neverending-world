@@ -163,7 +163,7 @@ void UI::renderDialogue(const DialogueNode &node, const NPC &npc,
     const Rectangle contentRect = {
         style.margin + style.padding, style.margin + style.padding,
         style.width - style.padding * 2, style.height - style.padding * 2};
-    Texture2D asset = npc.avatars[npc.type - 1];
+    Texture2D asset = npc.avatars[npc.id];
     const float scale = style.avatarScale;
     const float leftColWidth = asset.width * scale;
 
@@ -259,15 +259,14 @@ void UI::renderInventory(const vector<InventoryItem> &inventory) {
         {style.margin, style.margin, style.width, style.height},
         style.roundness, style.segments,
         Fade(Palette::Charcoal, style.opacity));
-    TextStyle inventoryTextStyle = {.fontSize = 64.0f,
-                                    .colour = Palette::Brown,
-                                    .horizontal = Align::Center,
-                                    .vertical = Align::Start};
-
     Rectangle contentRect = {
         style.margin + style.padding, style.margin + style.padding,
         style.width - style.padding, style.height - style.padding};
-    renderTextInBounds("Inventory", contentRect, inventoryTextStyle);
+    renderTextInBounds("Inventory", contentRect,
+                       {.fontSize = 64.0f,
+                        .colour = Palette::Brown,
+                        .horizontal = Align::Center,
+                        .vertical = Align::Start});
 
     for (int i = 0; i < 15; i++) {
         const Rectangle slot = getInventorySlotRect(i);
@@ -420,4 +419,21 @@ void UI::renderTextInBounds(const string &text, Rectangle bounds,
     DrawTextEx(font, (word + " ").c_str(), currentPos, style.fontSize,
                style.spacing, style.colour);
     currentPos.x += wordSize.x + spaceWidth;
+}
+
+void UI::renderShop() {
+    const auto &style = STYLES.shop;
+    DrawRectangleRounded(
+        {style.margin, style.margin, style.width, style.height},
+        style.roundness, style.segments,
+        Fade(Palette::Charcoal, style.opacity));
+
+    Rectangle contentRect = {
+        style.margin + style.padding, style.margin + style.padding,
+        style.width - style.padding, style.height - style.padding};
+    renderTextInBounds("Rowan's Shop", contentRect,
+                       {.fontSize = 64.0f,
+                        .colour = Palette::Brown,
+                        .horizontal = Align::Center,
+                        .vertical = Align::Start});
 }

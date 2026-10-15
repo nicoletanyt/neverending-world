@@ -13,7 +13,7 @@ using recursive_directory_iterator =
     std::filesystem::recursive_directory_iterator;
 
 map<int, map<int, vector<Texture2D>>> NPC::assets;
-map<int, Texture2D> NPC::avatars;
+map<NPCId, Texture2D> NPC::avatars;
 
 void NPC::loadAssets() {
     const regex pattern(R"(^npc_(\d+)_walk_(-?\d+)_(\d+)$)");
@@ -41,7 +41,8 @@ void NPC::loadAssets() {
             }
         }
     }
-    avatars[0] = LoadTexture("assets/avatars/npc_1.png");
+    avatars[NPCId::Sandy] = LoadTexture("assets/avatars/npc_1.png");
+    avatars[NPCId::Rowan] = LoadTexture("assets/avatars/npc_2.png");
 }
 
 void NPC::update() {}

@@ -17,7 +17,7 @@ class NPC {
 
   public:
     static map<int, map<int, vector<Texture2D>>> assets;
-    static map<int, Texture2D> avatars;
+    static map<NPCId, Texture2D> avatars;
     static constexpr Vector2 size = {64.0f, 64.0f};
 
     const NPCId id;

@@ -4,4 +4,5 @@
 struct DialogueContent {
     static QuestDialogue makeClearMonsterDialogue();
     static QuestDialogue makeFindMapDialogue();
+    static Dialogue makeShopDialogue();
 };

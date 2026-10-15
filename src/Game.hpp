@@ -12,10 +12,11 @@
 #include <map>
 #include <raylib.h>
 #include <set>
+#include <variant>
 #include <vector>
 
 enum class AssetTypes { Background, Hearts };
-enum class GameMode { Playing, Inventory, Dialog };
+enum class GameMode { Playing, Inventory, Dialogue, Shop };
 
 struct InventoryItem {
     CollectableType type;
@@ -41,9 +42,10 @@ class Game {
 
     map<QuestId, Quest> quests;
     map<QuestId, QuestDialogue> questDialogues;
+    map<NPCId, Dialogue> npcDialogues;
     vector<QuestId> completedQuests;
 
-    QuestDialogue *activeDialog = nullptr;
+    variant<monostate, QuestDialogue *, Dialogue *> activeDialog = monostate{};
     NPC *activeNPC = nullptr;
     Quest *activeQuest = nullptr;
 
@@ -69,6 +71,7 @@ class Game {
     vector<Collectable>::iterator getCollectable();
 
     void interactWithNPC(NPC &npc);
+    Dialogue *getCurrentDialogue();
 
     void initNPC();
     void initQuests();

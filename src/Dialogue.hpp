@@ -8,7 +8,7 @@
 
 using namespace std;
 
-enum class DialogueAction { None, AcceptQuest, CompleteQuest };
+enum class DialogueAction { None, AcceptQuest, CompleteQuest, OpenShop };
 
 struct DialogueChoice;
 

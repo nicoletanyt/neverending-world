@@ -61,6 +61,8 @@ struct DialogueStyle : PanelStyle {
     float bottomPadding = 10.0f;
 };
 
+struct ShopStyle : PanelStyle {};
+
 struct QuestStyle {
     float marginLeft = 30.0f;
     float marginTop = 100.0f;
@@ -94,6 +96,7 @@ struct UIStyle {
     TopbarStyle topbar;
     DialogueStyle dialogue;
     PanelStyle panel;
+    ShopStyle shop;
     QuestStyle quest;
     Vector2 quantityOffset = {8.0f, 8.0f};
     float quantitySpacing = 2.0f;
@@ -153,6 +156,7 @@ class UI {
     void renderDialogue(const DialogueNode &node, const NPC &npc,
                         int selectedOption);
     void renderQuest(const Quest &quest);
+    void renderShop();
 
     Rectangle getInventorySlotRect(int index);
 };
