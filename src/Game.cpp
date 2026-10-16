@@ -270,7 +270,7 @@ void Game::render() {
         float distance = calculateDistance(player.pos, npc.pos);
         if (distance < 64) {
             ui.renderNPCName(npc);
-            if (IsKeyPressed(KEY_Q))
+            if (IsKeyPressed(KEY_Q) && mode != GameMode::Dialogue)
                 interactWithNPC(npc);
         }
     }
@@ -295,7 +295,7 @@ void Game::interactWithNPC(NPC &npc) {
     activeNPC = &npc;
     lineIndex = 0;
     // progress to next quest
-    if (!activeQuest) {
+    if (!activeQuest || npc.id == activeQuest->npcId) {
         optional<QuestId> prevId = nullopt;
         if (!completedQuests.empty())
             prevId = completedQuests.back();
@@ -307,8 +307,6 @@ void Game::interactWithNPC(NPC &npc) {
             activeDialog = &npcDialogues.at(activeNPC->id);
         }
     } else {
-        // FIX: double visit error: change npc.id to NPCId and check if npc and
-        // quest are the same. if not -> default
         activeDialog = &npcDialogues.at(activeNPC->id);
     }
 }
@@ -350,7 +348,7 @@ void Game::initQuests() {
                 },
             },
         .onCompletion = [this]() { addToInventory(CollectableType::Coin, 10); },
-        .npcId = 1,
+        .npcId = NPCId::Sandy,
     };
     quests[QuestId::FindMap] = {
         .id = QuestId::FindMap,
@@ -380,7 +378,7 @@ void Game::initQuests() {
                 },
             },
         .onCompletion = [this]() { addToInventory(CollectableType::Coin, 10); },
-        .npcId = 2,
+        .npcId = NPCId::Sandy,
     };
 }
 

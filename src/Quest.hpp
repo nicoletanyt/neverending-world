@@ -1,5 +1,6 @@
 #pragma once
 
+// #include "entities/NPC.hpp"
 #include <functional>
 #include <string>
 
@@ -17,6 +18,8 @@ struct QuestObjective {
     int progress;
 };
 
+enum class NPCId;
+
 struct Quest {
     QuestId id;
     string name;
@@ -26,5 +29,5 @@ struct Quest {
     int current = 0; // index of current objective
 
     function<void()> onCompletion;
-    int npcId;
+    NPCId npcId;
 };
