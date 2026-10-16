@@ -9,6 +9,7 @@
 #include "raylib.h"
 #include "utils.hpp"
 #include <algorithm>
+#include <iostream>
 #include <variant>
 #include <vector>
 

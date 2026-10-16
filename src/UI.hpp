@@ -57,7 +57,8 @@ struct PanelStyle {
 struct InventoryStyle : PanelStyle {
     // layout
     float layoutRatio = 0.6f; // .6 and .4
-    float gap = 50.0f;        // column gap
+    float topGap = 50.0f;
+    float rowGap = 20.0f;
     float slotSize = 100.0f;
 
     SlotStyle slot{.imagePadding = 15.0f,
@@ -155,10 +156,10 @@ class UI {
     map<CollectableType, ItemIcon> itemAssets;
     Texture2D profileAsset;
 
-    Vector2 getTextPos(const string &text, Rectangle bounds, TextStyle style);
+    Vector2 getStartPos(Rectangle bounds, TextStyle style);
     const Font &getFont(float fontSize);
-    vector<string> wrapText(const string &text, const float endX,
-                            TextStyle style, float textX);
+    vector<string> wrapText(const string &text, const float maxWidth,
+                            TextStyle style);
     TextLayout getTextLayout(const string &text, const Rectangle &bounds,
                              TextStyle style);
     float getTextHeight(int lineCount, float fontSize);

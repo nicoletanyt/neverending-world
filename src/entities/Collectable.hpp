@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 #include <map>
 #include <raylib.h>
 #include <string>
@@ -9,6 +8,7 @@ using namespace std;
 enum class CollectableType { Coin, Potion };
 
 string collectableTypeToString(CollectableType type);
+string collectableDescription(CollectableType type);
 
 class Collectable {
   private:

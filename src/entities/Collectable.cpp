@@ -20,6 +20,17 @@ string collectableTypeToString(CollectableType type) {
     return "Unknown";
 }
 
+string collectableDescription(CollectableType type) {
+    switch (type) {
+    case CollectableType::Coin:
+        return "Useful for trading with merchants.";
+    case CollectableType::Potion:
+        return "Restores 10 health (½ heart).";
+    }
+
+    return "";
+}
+
 void Collectable::loadAssets(CollectableType type, string path) {
     const regex pattern(R"(^.+_(\d+)\.png$)");
     map<int, filesystem::path> orderedPaths;

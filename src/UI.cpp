@@ -270,7 +270,7 @@ void UI::renderInventory(const vector<InventoryItem> &inventory) {
                                       .colour = Palette::Brown,
                                       .horizontal = Align::Center,
                                       .vertical = Align::Start});
-    float topOffset = title.height + style.gap;
+    float topOffset = title.height + style.topGap;
 
     Rectangle inventoryRect = {contentRect.x, contentRect.y + topOffset,
                                contentRect.width * style.layoutRatio,
@@ -314,8 +314,18 @@ void UI::renderDetailItem(const InventoryItem &item,
                                          .colour = Palette::Parchment,
                                          .horizontal = Align::Center,
                                          .vertical = Align::Start});
+    y += itemName.height + style.rowGap;
+    TextLayout itemDescription =
+        getTextLayout(collectableDescription(item.type).c_str(),
+                      {detailRect.x, y, detailRect.width,
+                       detailRect.height - itemName.height - style.rowGap},
+                      {.fontSize = 24.0f,
+                       .colour = Palette::Parchment,
+                       .horizontal = Align::Center,
+                       .vertical = Align::Start});
     renderText(itemName);
-    y += itemName.height + style.gap;
+    renderText(itemDescription);
+    y += itemDescription.height + 50.0f;
 
     // Image
     const float detailCenterX = detailRect.x + (detailRect.width) / 2;
@@ -325,7 +335,7 @@ void UI::renderDetailItem(const InventoryItem &item,
     Vector2 imagePos = {detailCenterX - size.x / 2, y};
 
     DrawTextureEx(texture, imagePos, 0, scale, WHITE);
-    y += size.y + style.gap;
+    y += size.y + 50.0f;
 
     if (item.type == CollectableType::Potion) {
         TextLayout buttonLabel = getTextLayout("Consume", consumeButton.rect,
@@ -356,43 +366,55 @@ void UI::calculateInventorySlots(const Rectangle &inventoryRect) {
     }
 }
 
-Vector2 UI::getTextPos(const string &text, Rectangle bounds, TextStyle style) {
-    const Font &font = getFont(style.fontSize);
-    style.fontSize = static_cast<float>(font.baseSize);
-    Vector2 textPos;
-    const Vector2 textSize =
-        MeasureTextEx(font, text.c_str(), style.fontSize, style.spacing);
+Vector2 UI::getStartPos(Rectangle bounds, TextStyle style) {
+    Vector2 pos;
 
     switch (style.horizontal) {
     case Align::Start:
-        textPos.x = bounds.x;
+        pos.x = bounds.x;
         break;
     case Align::Center:
-        textPos.x = bounds.x + (bounds.width - textSize.x) / 2;
+        pos.x = bounds.x + bounds.width / 2;
         break;
     case Align::End:
-        textPos.x = bounds.x + bounds.width - textSize.x;
+        pos.x = bounds.x + bounds.width;
         break;
     }
 
     switch (style.vertical) {
     case Align::Start:
-        textPos.y = bounds.y;
+        pos.y = bounds.y;
         break;
     case Align::Center:
-        textPos.y = bounds.y + (bounds.height - textSize.y) / 2;
+        pos.y = bounds.y + (bounds.height) / 2;
         break;
     case Align::End:
-        textPos.y = bounds.y + bounds.height - textSize.y;
+        pos.y = bounds.y + bounds.height;
         break;
     }
-    return textPos;
+    return pos;
 }
 
 void UI::renderText(TextLayout layout) {
     const Font &font = getFont(layout.style.fontSize);
     for (const string &line : layout.lines) {
-        DrawTextEx(font, line.c_str(), layout.pos, layout.style.fontSize,
+        float lineWidth =
+            MeasureTextEx(font, line.c_str(), layout.style.fontSize,
+                          layout.style.spacing)
+                .x;
+        Vector2 pos = layout.pos;
+
+        switch (layout.style.horizontal) {
+        case Align::Start:
+            break;
+        case Align::Center:
+            pos.x -= lineWidth / 2;
+            break;
+        case Align::End:
+            pos.x -= lineWidth;
+            break;
+        }
+        DrawTextEx(font, line.c_str(), pos, layout.style.fontSize,
                    layout.style.spacing, layout.style.colour);
         layout.pos.y += font.baseSize * lineHeight;
     }
@@ -403,13 +425,13 @@ Rectangle UI::getContentRect(Rectangle rect, float padding) {
             rect.height - padding * 2};
 }
 
-vector<string> UI::wrapText(const string &text, const float endX,
-                            TextStyle style, float textX) {
+vector<string> UI::wrapText(const string &text, const float maxWidth,
+                            TextStyle style) {
     const Font &font = getFont(style.fontSize);
     const float spaceWidth =
         MeasureTextEx(font, " ", style.fontSize, style.spacing).x +
         style.spacing + 3.0f;
-    float currentX = textX;
+    float currentX = 0;
     string word = "";
     vector<string> lines = {""};
 
@@ -423,9 +445,9 @@ vector<string> UI::wrapText(const string &text, const float endX,
             float requiredWidth =
                 wordWidth + (lines.back().empty() ? 0.0f : spaceWidth);
 
-            if (!lines.back().empty() && currentX + requiredWidth > endX) {
+            if (!lines.back().empty() && currentX + requiredWidth > maxWidth) {
                 // new line
-                currentX = textX;
+                currentX = 0;
                 lines.push_back("");
             }
             if (!lines.back().empty()) {
@@ -456,9 +478,8 @@ const Font &UI::getFont(float fontSize) {
 
 TextLayout UI::getTextLayout(const string &text, const Rectangle &bounds,
                              TextStyle style) {
-    Vector2 pos = getTextPos(text, bounds, style);
-    vector<string> lines =
-        wrapText(text, bounds.x + bounds.width, style, pos.x);
+    vector<string> lines = wrapText(text, bounds.width, style);
+    Vector2 pos = getStartPos(bounds, style);
     float height = getTextHeight(lines.size(), style.fontSize);
     return {pos, lines, height, style};
 }
