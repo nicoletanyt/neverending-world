@@ -17,17 +17,31 @@ struct Quest;
 
 enum class Align { Center, Start, End };
 
+namespace Palette {
+constexpr Color Charcoal = {37, 43, 40, 255};     // #252B28
+constexpr Color Parchment = {216, 208, 184, 255}; // #D8D0B8
+constexpr Color FadedParchment = {216, 208, 184, 102};
+constexpr Color MossGreen = {105, 124, 104, 255}; // #697C68
+constexpr Color Brown = {156, 118, 91, 255};      // #9C765B
+constexpr Color MutedRed = {166, 95, 89, 255};    // #A65F59
+constexpr Color FogGrey = {146, 154, 154, 255};   // #929A9A
+} // namespace Palette
+
 struct ItemIcon {
     Texture2D texture;
     float scale;
 };
 
 struct SlotStyle {
-    float roundness = 0.2f;
-    int segments = 8;
+    float roundness = 0.26f;
+    int segments = 0;
     float borderWidth = 4.0f;
     float fillOpacity = 0.4f;
     float borderOpacity = 0.8f;
+    float imagePadding;
+
+    Vector2 quantityOffset;
+    float quantityFontSize;
 };
 
 struct PanelStyle {
@@ -41,13 +55,14 @@ struct PanelStyle {
 };
 
 struct InventoryStyle : PanelStyle {
-    float slotSize = 60.0f;
-    float slotGap = 20.0f;
-    float gridTopOffset = 100.0f;
-    float gap = 50.0f; // column gap
-    float fontSize = 16.0f;
+    // layout
+    float layoutRatio = 0.6f; // .6 and .4
+    float gap = 50.0f;        // column gap
+    float slotSize = 100.0f;
 
-    SlotStyle slot{.roundness = 0.26f, .segments = 0};
+    SlotStyle slot{.imagePadding = 15.0f,
+                   .quantityOffset = {8.0f, 8.0f},
+                   .quantityFontSize = 24.0f};
 };
 
 struct DialogueStyle : PanelStyle {
@@ -68,6 +83,7 @@ struct QuestStyle {
     float marginTop = 100.0f;
     float padding = 12.0f;
     float height = 75.0f;
+    float gap = 15.0f;
 };
 
 struct HotbarStyle {
@@ -76,7 +92,9 @@ struct HotbarStyle {
     float rightMargin = 30.0f;
     float bottomMargin = 30.0f;
     float fontSize = 16.0f;
-    SlotStyle slot{.roundness = 0.26f, .segments = 0};
+    SlotStyle slot{.imagePadding = 7.0f,
+                   .quantityOffset = {1.0f, 1.0f},
+                   .quantityFontSize = 16.0f};
 };
 
 struct TopbarStyle {
@@ -98,8 +116,6 @@ struct UIStyle {
     PanelStyle panel;
     ShopStyle shop;
     QuestStyle quest;
-    Vector2 quantityOffset = {8.0f, 8.0f};
-    float quantitySpacing = 2.0f;
 };
 
 struct TextStyle {
@@ -110,19 +126,26 @@ struct TextStyle {
     Align vertical = Align::Start;
 };
 
-namespace Palette {
-constexpr Color Charcoal = {37, 43, 40, 255};     // #252B28
-constexpr Color Parchment = {216, 208, 184, 255}; // #D8D0B8
-constexpr Color FadedParchment = {216, 208, 184, 102};
-constexpr Color MossGreen = {105, 124, 104, 255}; // #697C68
-constexpr Color Brown = {156, 118, 91, 255};      // #9C765B
-constexpr Color MutedRed = {166, 95, 89, 255};    // #A65F59
-constexpr Color FogGrey = {146, 154, 154, 255};   // #929A9A
-} // namespace Palette
+struct TextLayout {
+    Vector2 pos;
+    vector<string> lines;
+    float height;
+    TextStyle style;
+};
+
+struct ButtonStyle {
+    Color background = Palette::MossGreen;
+    Rectangle rect;
+    TextStyle textStyle = {.fontSize = 24.0f,
+                           .colour = Palette::Parchment,
+                           .horizontal = Align::Center,
+                           .vertical = Align::Center};
+};
 
 class UI {
   private:
     inline static constexpr UIStyle STYLES{};
+    const float lineHeight = 1.5f;
 
     static Font fontSmall;
     static Font fontMedium;
@@ -132,20 +155,29 @@ class UI {
     map<CollectableType, ItemIcon> itemAssets;
     Texture2D profileAsset;
 
-    void renderTextInBounds(const string &text, Rectangle bounds,
-                            TextStyle style, bool textWrap = false);
+    Vector2 getTextPos(const string &text, Rectangle bounds, TextStyle style);
+    const Font &getFont(float fontSize);
+    vector<string> wrapText(const string &text, const float endX,
+                            TextStyle style, float textX);
+    TextLayout getTextLayout(const string &text, const Rectangle &bounds,
+                             TextStyle style);
+    float getTextHeight(int lineCount, float fontSize);
+    void renderText(TextLayout layout);
 
     void renderSlot(const Rectangle &rect, const SlotStyle &style,
                     Color fillColor);
     Rectangle getHotbarSlotRect(int index) const;
     void renderInventoryItem(const InventoryItem &item, const Rectangle &slot,
-                             float fontSize, Color colour);
+                             Color colour);
     void renderDetailItem(const InventoryItem &item,
-                          const Rectangle &contentRect);
+                          const Rectangle &detailRect);
+    Rectangle getContentRect(Rectangle rect, float padding);
+    void calculateInventorySlots(const Rectangle &inventoryRect);
 
   public:
-    Rectangle consumeBtn;
+    ButtonStyle consumeButton;
     int selectedSquare = -1;
+    array<Rectangle, SLOT_COUNT> slots;
 
     void loadAssets();
     void renderTopbar(Player &player);
@@ -157,6 +189,4 @@ class UI {
                         int selectedOption);
     void renderQuest(const Quest &quest);
     void renderShop();
-
-    Rectangle getInventorySlotRect(int index);
 };

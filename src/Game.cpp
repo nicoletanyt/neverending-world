@@ -91,8 +91,8 @@ void Game::update() {
     case GameMode::Inventory: {
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             Vector2 mouse = GetMousePosition();
-            for (int i = 0; i < 15; i++) {
-                Rectangle slot = ui.getInventorySlotRect(i);
+            for (int i = 0; i < SLOT_COUNT; i++) {
+                Rectangle slot = ui.slots[i];
                 if (CheckCollisionPointRec(mouse, slot)) {
                     if (ui.selectedSquare == i)
                         ui.selectedSquare = -1;
@@ -100,7 +100,7 @@ void Game::update() {
                         ui.selectedSquare = i;
                 }
             }
-            if (CheckCollisionPointRec(mouse, ui.consumeBtn)) {
+            if (CheckCollisionPointRec(mouse, ui.consumeButton.rect)) {
                 bool ifHeal = player.heal(10);
                 if (ifHeal)
                     removeFromInventory(inventory[ui.selectedSquare].type);
@@ -307,6 +307,8 @@ void Game::interactWithNPC(NPC &npc) {
             activeDialog = &npcDialogues.at(activeNPC->id);
         }
     } else {
+        // FIX: double visit error: change npc.id to NPCId and check if npc and
+        // quest are the same. if not -> default
         activeDialog = &npcDialogues.at(activeNPC->id);
     }
 }
