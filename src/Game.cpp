@@ -101,11 +101,13 @@ void Game::update() {
                         ui.selectedSquare = i;
                 }
             }
-            if (CheckCollisionPointRec(mouse, ui.consumeButton.rect)) {
-                bool ifHeal = player.heal(10);
-                if (ifHeal)
-                    removeFromInventory(inventory[ui.selectedSquare].type);
-            }
+        }
+        if ((size_t)ui.selectedSquare < inventory.size() &&
+            inventory[ui.selectedSquare].type == CollectableType::Potion &&
+            IsKeyPressed(KEY_Q)) {
+            bool ifHeal = player.heal(10);
+            if (ifHeal)
+                removeFromInventory(inventory[ui.selectedSquare].type);
         }
 
         break;
@@ -258,36 +260,41 @@ void Game::render() {
         item.render();
     }
 
-    ui.renderTopbar(player);
-    ui.renderHotbar(inventory);
-    if (activeQuest && activeQuest->status != QuestStatus::Completed)
-        ui.renderQuest(*activeQuest);
-
-    for (const Enemy &enemy : enemies[location]) {
-        if (enemy.health > 0)
-            ui.renderEnemyHealth(enemy);
-    }
-    for (NPC &npc : npcs[location]) {
-        float distance = calculateDistance(player.pos, npc.pos);
-        if (distance < 64) {
-            ui.renderNPCName(npc);
-            if (IsKeyPressed(KEY_Q) && mode != GameMode::Dialogue)
-                interactWithNPC(npc);
-        }
-    }
-
-    if (mode == GameMode::Inventory)
+    switch (mode) {
+    case GameMode::Inventory:
         ui.renderInventory(inventory);
-
-    if (mode == GameMode::Dialogue) {
+        break;
+    case GameMode::Shop:
+        ui.renderShop();
+        break;
+    case GameMode::Dialogue: {
         Dialogue *current = getCurrentDialogue();
         if (current)
             ui.renderDialogue((*current).at(lineIndex), *activeNPC,
                               selectedOption);
+        break;
     }
+    case GameMode::Playing: {
+        ui.renderTopbar(player);
+        ui.renderHotbar(inventory);
 
-    if (mode == GameMode::Shop) {
-        ui.renderShop();
+        if (activeQuest && activeQuest->status != QuestStatus::Completed)
+            ui.renderQuest(*activeQuest);
+
+        for (const Enemy &enemy : enemies[location]) {
+            if (enemy.health > 0)
+                ui.renderEnemyHealth(enemy);
+        }
+        for (NPC &npc : npcs[location]) {
+            float distance = calculateDistance(player.pos, npc.pos);
+            if (distance < 64) {
+                ui.renderNPCName(npc);
+                if (IsKeyPressed(KEY_Q) && mode != GameMode::Dialogue)
+                    interactWithNPC(npc);
+            }
+        }
+        break;
+    }
     }
 }
 

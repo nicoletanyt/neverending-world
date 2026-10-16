@@ -9,7 +9,7 @@ inline constexpr float WINDOW_WIDTH = 900.0f;
 inline constexpr float WINDOW_HEIGHT = 700.0f;
 
 inline constexpr float HOTBAR_SLOTS = 5;
-const int INVENTORY_COLS = 3;
+const int INVENTORY_COLS = 4;
 const int SLOT_COUNT = INVENTORY_COLS * INVENTORY_COLS;
 inline constexpr float INVENTORY_FONT_SIZE = 20.0f;
 
