@@ -23,6 +23,12 @@ struct InventoryItem {
     int quantity;
 };
 
+struct ShopItem {
+    InventoryItem item;
+    int price;
+    int stockRemaining;
+};
+
 class Game {
   private:
     UI ui;
@@ -36,6 +42,8 @@ class Game {
     Texture2D background;
 
     vector<InventoryItem> inventory;
+    vector<ShopItem> shop;
+
     map<Location, vector<Collectable>> collectables;
 
     GameMode mode = GameMode::Playing;
@@ -66,14 +74,22 @@ class Game {
     bool enemyColliding();
 
     void addToInventory(const CollectableType &type, int quantity = 1);
-    void removeFromInventory(const CollectableType &type);
+    void removeFromInventory(const CollectableType &type, int quantity);
     vector<Collectable>::iterator getCollectable();
 
     void interactWithNPC(NPC &npc);
     Dialogue *getCurrentDialogue();
 
+    void useItem(CollectableType &type);
+    void buyItem(ShopItem &shopItem);
+    void handleItemSelection();
+
+    int getCoinCount() const;
+    bool spendCoins(int amount);
+
     void initNPC();
     void initQuests();
+    void initShop();
 
   public:
     Game() {
@@ -94,6 +110,7 @@ class Game {
         trees[location] = {};
         initNPC();
         initQuests();
+        initShop();
     }
 
     void update();

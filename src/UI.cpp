@@ -6,8 +6,10 @@
 #include "entities/Player.hpp"
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <raylib.h>
 #include <string>
+#include <type_traits>
 
 map<float, Font> UI::fonts;
 
@@ -25,6 +27,7 @@ void UI::loadAssets() {
         LoadTexture("assets/coins/coin_01.png"), 0.7f};
     itemAssets[CollectableType::Potion] = {
         LoadTexture("assets/potions/healing_01.png"), 2.5f};
+    itemAssets[CollectableType::Map] = {LoadTexture("assets/map.png"), 0.2f};
 
     profileAsset = LoadTexture("assets/profile.png");
 
@@ -269,54 +272,18 @@ void UI::renderNPCName(const NPC &npc) {
 }
 
 void UI::renderInventory(const vector<InventoryItem> &inventory) {
-    const auto &style = STYLES.inventory;
-    const Rectangle containerRect = {style.margin, style.margin, style.width,
-                                     style.height};
-    const Rectangle contentRect = getContentRect(containerRect, style.padding);
-
-    const Rectangle leftRect = {contentRect.x, contentRect.y,
-                                contentRect.width * style.layoutRatio,
-                                contentRect.height};
-    const Rectangle rightRect = {
-        contentRect.x + leftRect.width + style.columnGap, contentRect.y,
-        contentRect.width * (1 - style.layoutRatio) - style.columnGap,
-        contentRect.height};
-    TextLayout title = getTextLayout("Inventory", leftRect,
-                                     {
-                                         .fontSize = FontSize::Large,
-                                         .spacing = 1.5f,
-                                         .colour = Palette::Brown,
-                                     });
-    float topOffset = title.height + style.topGap;
-
-    Rectangle inventoryRect = {leftRect.x, leftRect.y + topOffset,
-                               leftRect.width, leftRect.height - topOffset};
-    calculateInventorySlots(inventoryRect);
-
-    DrawRectangleRounded(containerRect, style.roundness, style.segments,
-                         Fade(Palette::Charcoal, style.opacity));
-    renderText(title);
-    for (int i = 0; i < SLOT_COUNT; i++) {
-        const Rectangle slot = slots[i];
-        const Color fillColor =
-            selectedSquare == i ? Palette::MossGreen : Palette::FogGrey;
-        renderSlot(slot, style.slot, fillColor);
-
-        if (i < static_cast<int>(inventory.size())) {
-            renderInventoryItem(inventory[i], slot, Palette::Charcoal,
-                                style.slot);
-        }
-    }
+    const Rectangle detailRect = renderItemGrid(inventory, "Inventory");
 
     if (selectedSquare >= 0 &&
         selectedSquare < static_cast<int>(inventory.size())) {
-        renderDetailItem(inventory[selectedSquare], rightRect);
+        renderDetailItem(inventory[selectedSquare], detailRect);
     }
 }
 
-void UI::renderDetailItem(const InventoryItem &item,
-                          const Rectangle &detailRect) {
+Rectangle UI::renderItemDetails(const InventoryItem &item,
+                                const Rectangle &detailRect) {
     const auto &style = STYLES.inventory;
+
     const Texture2D texture = itemAssets[item.type].texture;
     Rectangle remainingRect = detailRect;
 
@@ -357,6 +324,13 @@ void UI::renderDetailItem(const InventoryItem &item,
     DrawTextureEx(texture, imagePos, 0, scale, WHITE);
     remainingRect.y += size.y + 50.0f;
 
+    return remainingRect;
+}
+
+void UI::renderDetailItem(const InventoryItem &item,
+                          const Rectangle &detailRect) {
+    Rectangle remainingRect = renderItemDetails(item, detailRect);
+
     if (item.type == CollectableType::Potion) {
         TextLayout consumeText = getTextLayout("[Q] Use Potion", remainingRect,
                                                {
@@ -368,7 +342,29 @@ void UI::renderDetailItem(const InventoryItem &item,
     }
 }
 
-void UI::calculateInventorySlots(const Rectangle &inventoryRect) {
+void UI::renderDetailItem(const ShopItem &shopItem,
+                          const Rectangle &detailRect) {
+    Rectangle remainingRect = renderItemDetails(shopItem.item, detailRect);
+    TextLayout priceText = getTextLayout(
+        format("Price: {} Coins", shopItem.price).c_str(), remainingRect,
+        {
+            .fontSize = FontSize::Medium,
+            .colour = Palette::Parchment,
+        });
+    renderText(priceText);
+    remainingRect.y += priceText.height + 30.0f;
+    const string buyText =
+        shopItem.stockRemaining == 0 ? "No more stock!" : "[Q] Buy";
+    renderText(getTextLayout(buyText.c_str(), remainingRect,
+                             {
+                                 .fontSize = FontSize::Medium,
+                                 .colour = shopItem.stockRemaining == 0
+                                               ? Palette::MutedRed
+                                               : Palette::Parchment,
+                             }));
+}
+
+void UI::calculateItemSlots(const Rectangle &inventoryRect) {
     const auto &style = STYLES.inventory;
     const float slotGap = (fmin(inventoryRect.width, inventoryRect.height) -
                            (style.slot.size * INVENTORY_COLS)) /
@@ -507,21 +503,64 @@ void UI::drawTextureInSquare(const Texture2D &texture, Vector2 center,
     DrawTextureEx(texture, pos, 0, scale, WHITE);
 }
 
-void UI::renderShop() {
-    const auto &style = STYLES.shop;
-    DrawRectangleRounded(
-        {style.margin, style.margin, style.width, style.height},
-        style.roundness, style.segments,
-        Fade(Palette::Charcoal, style.opacity));
+void UI::renderShop(vector<ShopItem> shop) {
+    const Rectangle detailRect = renderItemGrid(shop, "Rowan's Shop");
 
-    Rectangle contentRect = {
-        style.margin + style.padding, style.margin + style.padding,
-        style.width - style.padding, style.height - style.padding};
-
-    TextLayout heading = getTextLayout("Rowan's Shop", contentRect,
-                                       {.fontSize = FontSize::Large,
-                                        .colour = Palette::Brown,
-                                        .horizontal = Align::Center,
-                                        .vertical = Align::Start});
-    renderText(heading);
+    if (selectedSquare >= 0 && selectedSquare < static_cast<int>(shop.size())) {
+        renderDetailItem(shop[selectedSquare], detailRect);
+    }
 }
+
+template <typename T>
+Rectangle UI::renderItemGrid(const vector<T> &items, const string &heading) {
+    const auto &style = STYLES.inventory;
+    const Rectangle containerRect = {style.margin, style.margin, style.width,
+                                     style.height};
+    const Rectangle contentRect = getContentRect(containerRect, style.padding);
+
+    const Rectangle leftRect = {contentRect.x, contentRect.y,
+                                contentRect.width * style.layoutRatio,
+                                contentRect.height};
+    const Rectangle rightRect = {
+        contentRect.x + leftRect.width + style.columnGap, contentRect.y,
+        contentRect.width * (1 - style.layoutRatio) - style.columnGap,
+        contentRect.height};
+    TextLayout title = getTextLayout(heading, leftRect,
+                                     {
+                                         .fontSize = FontSize::Large,
+                                         .spacing = 1.5f,
+                                         .colour = Palette::Brown,
+                                     });
+    float topOffset = title.height + style.topGap;
+
+    Rectangle inventoryRect = {leftRect.x, leftRect.y + topOffset,
+                               leftRect.width, leftRect.height - topOffset};
+    calculateItemSlots(inventoryRect);
+
+    DrawRectangleRounded(containerRect, style.roundness, style.segments,
+                         Fade(Palette::Charcoal, style.opacity));
+    renderText(title);
+    for (int i = 0; i < SLOT_COUNT; i++) {
+        const Rectangle slot = slots[i];
+        const Color fillColor =
+            selectedSquare == i ? Palette::MossGreen : Palette::FogGrey;
+        renderSlot(slot, style.slot, fillColor);
+
+        if (i < static_cast<int>(items.size())) {
+            if constexpr (is_same_v<T, ShopItem>) {
+                renderInventoryItem(items[i].item, slot, Palette::Charcoal,
+                                    style.slot);
+            } else {
+                renderInventoryItem(items[i], slot, Palette::Charcoal,
+                                    style.slot);
+            }
+        }
+    }
+    return rightRect;
+}
+
+template Rectangle
+UI::renderItemGrid<InventoryItem>(const vector<InventoryItem> &,
+                                  const string &heading);
+template Rectangle UI::renderItemGrid<ShopItem>(const vector<ShopItem> &,
+                                                const string &heading);

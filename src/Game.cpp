@@ -89,29 +89,6 @@ void Game::update() {
 
         break;
     }
-    case GameMode::Inventory: {
-        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-            Vector2 mouse = GetMousePosition();
-            for (int i = 0; i < SLOT_COUNT; i++) {
-                Rectangle slot = ui.slots[i];
-                if (CheckCollisionPointRec(mouse, slot)) {
-                    if (ui.selectedSquare == i)
-                        ui.selectedSquare = -1;
-                    else
-                        ui.selectedSquare = i;
-                }
-            }
-        }
-        if ((size_t)ui.selectedSquare < inventory.size() &&
-            inventory[ui.selectedSquare].type == CollectableType::Potion &&
-            IsKeyPressed(KEY_Q)) {
-            bool ifHeal = player.heal(10);
-            if (ifHeal)
-                removeFromInventory(inventory[ui.selectedSquare].type);
-        }
-
-        break;
-    }
     case GameMode::Dialogue: {
         Dialogue *currentDialogue = getCurrentDialogue();
         DialogueNode &node = (*currentDialogue)[lineIndex];
@@ -157,10 +134,42 @@ void Game::update() {
                 }
             }
         }
+        break;
     }
     case GameMode::Shop: {
+        handleItemSelection();
+        if ((size_t)ui.selectedSquare < shop.size() && IsKeyPressed(KEY_Q)) {
+            if (shop[ui.selectedSquare].stockRemaining == 0)
+                cout << "No more stock!\n";
+            else
+                buyItem(shop[ui.selectedSquare]);
+        }
         break;
-    };
+    }
+    case GameMode::Inventory: {
+        handleItemSelection();
+        if ((size_t)ui.selectedSquare < inventory.size() &&
+            IsKeyPressed(KEY_Q)) {
+            useItem(inventory[ui.selectedSquare].type);
+        }
+        break;
+    }
+    }
+}
+
+void Game::handleItemSelection() {
+    if (!IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        return;
+
+    Vector2 mouse = GetMousePosition();
+    for (int i = 0; i < SLOT_COUNT; i++) {
+        Rectangle slot = ui.slots[i];
+        if (CheckCollisionPointRec(mouse, slot)) {
+            if (ui.selectedSquare == i)
+                ui.selectedSquare = -1;
+            else
+                ui.selectedSquare = i;
+        }
     }
 }
 
@@ -170,7 +179,6 @@ void Game::changeLocation() {
         generateTreeData();
         generateEnemyData();
     }
-    // cout << location.x << " " << location.y << "\n";
 }
 
 void Game::generateTreeData() {
@@ -223,10 +231,10 @@ void Game::addToInventory(const CollectableType &type, int quantity) {
     inventory.emplace_back(type, quantity);
 }
 
-void Game::removeFromInventory(const CollectableType &type) {
+void Game::removeFromInventory(const CollectableType &type, int quantity) {
     for (auto it = inventory.begin(); it != inventory.end(); ++it) {
         if (it->type == type) {
-            it->quantity--;
+            it->quantity -= quantity;
             if (it->quantity == 0)
                 inventory.erase(it);
             return;
@@ -265,7 +273,7 @@ void Game::render() {
         ui.renderInventory(inventory);
         break;
     case GameMode::Shop:
-        ui.renderShop();
+        ui.renderShop(shop);
         break;
     case GameMode::Dialogue: {
         Dialogue *current = getCurrentDialogue();
@@ -399,4 +407,45 @@ Dialogue *Game::getCurrentDialogue() {
         return *ptr;
     }
     return nullptr;
+}
+
+void Game::initShop() {
+    // TODO: change to 10 after testing
+    shop.emplace_back(ShopItem{{CollectableType::Map, 1}, 1, 1});
+}
+
+void Game::buyItem(ShopItem &shopItem) {
+    if (spendCoins(shopItem.price)) {
+        addToInventory(shopItem.item.type);
+        shopItem.stockRemaining--;
+        cout << "Bought Item!\n";
+    } else {
+        cout << "Not enough money!\n";
+    }
+}
+
+void Game::useItem(CollectableType &type) {
+    if (type == CollectableType::Potion) {
+        bool ifHeal = player.heal(10);
+        if (ifHeal)
+            removeFromInventory(inventory[ui.selectedSquare].type, 1);
+    }
+}
+
+int Game::getCoinCount() const {
+    int count = 0;
+    for (const InventoryItem &item : inventory) {
+        if (item.type == CollectableType::Coin) {
+            count = item.quantity;
+            break;
+        }
+    }
+    return count;
+}
+
+bool Game::spendCoins(int amount) {
+    if (getCoinCount() < amount)
+        return false;
+    removeFromInventory(CollectableType::Coin, amount);
+    return true;
 }

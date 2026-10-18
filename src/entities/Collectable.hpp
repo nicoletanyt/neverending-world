@@ -5,7 +5,7 @@
 #include <vector>
 using namespace std;
 
-enum class CollectableType { Coin, Potion };
+enum class CollectableType { Coin, Potion, Map };
 
 string collectableTypeToString(CollectableType type);
 string collectableDescription(CollectableType type);
@@ -36,6 +36,8 @@ class Collectable {
             scale = 1.7;
             break;
         }
+        case CollectableType::Map:
+            break;
         }
 
         drawPos.x = pos.x + 32.0f - (size.x * scale) / 2;

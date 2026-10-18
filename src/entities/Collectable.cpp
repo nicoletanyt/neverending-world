@@ -15,6 +15,8 @@ string collectableTypeToString(CollectableType type) {
         return "Coin";
     case CollectableType::Potion:
         return "Potion";
+    case CollectableType::Map:
+        return "Map";
     }
 
     return "Unknown";
@@ -26,6 +28,9 @@ string collectableDescription(CollectableType type) {
         return "Useful for trading with merchants.";
     case CollectableType::Potion:
         return "Restores 10 health (½ heart).";
+    case CollectableType::Map:
+        return "A worn map of the surrounding lands. Who knows what secrets "
+               "lie beyond its edges?";
     }
 
     return "";

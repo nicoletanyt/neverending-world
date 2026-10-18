@@ -2,6 +2,7 @@
 
 #include "Constants.hpp"
 #include "Dialogue.hpp"
+// #include "Game.hpp"
 #include "entities/Collectable.hpp"
 #include "entities/Enemy.hpp"
 #include "entities/NPC.hpp"
@@ -13,6 +14,7 @@ using namespace std;
 
 class Player;
 struct InventoryItem;
+struct ShopItem;
 struct Quest;
 
 enum class Align { Center, Start, End };
@@ -168,12 +170,19 @@ class UI {
     Rectangle getHotbarSlotRect(int index) const;
     void renderInventoryItem(const InventoryItem &item, const Rectangle &slot,
                              Color colour, const SlotStyle slotStyle);
-    void renderDetailItem(const InventoryItem &item,
-                          const Rectangle &detailRect);
     Rectangle getContentRect(Rectangle rect, float padding);
-    void calculateInventorySlots(const Rectangle &inventoryRect);
+    void calculateItemSlots(const Rectangle &inventoryRect);
     void drawTextureInSquare(const Texture2D &texture, Vector2 center,
                              float size);
+
+    template <typename T>
+    Rectangle renderItemGrid(const vector<T> &items, const string &heading);
+    Rectangle renderItemDetails(const InventoryItem &item,
+                                const Rectangle &detailRect);
+    void renderDetailItem(const InventoryItem &item,
+                          const Rectangle &detailRect);
+    void renderDetailItem(const ShopItem &shopItem,
+                          const Rectangle &detailRect);
 
   public:
     int selectedSquare = -1;
@@ -188,5 +197,5 @@ class UI {
     void renderDialogue(const DialogueNode &node, const NPC &npc,
                         int selectedOption);
     void renderQuest(const Quest &quest);
-    void renderShop();
+    void renderShop(vector<ShopItem> shops);
 };
