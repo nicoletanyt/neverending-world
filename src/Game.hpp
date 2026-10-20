@@ -16,7 +16,7 @@
 #include <vector>
 
 enum class AssetTypes { Background, Hearts };
-enum class GameMode { Playing, Inventory, Dialogue, Shop };
+enum class GameMode { Playing, Inventory, Dialogue, Shop, Map };
 
 struct InventoryItem {
     CollectableType type;
@@ -60,6 +60,8 @@ class Game {
     int selectedOption = 0; // for dialog
     int lineIndex = 0;      // for dialog
 
+    int selectedHotbar = -1;
+
     Sound swordSound = LoadSound("assets/sounds/swoosh.mp3");
     Sound selectSound = LoadSound("assets/sounds/select.mp3");
     Sound beepSound = LoadSound("assets/sounds/beep.mp3");
@@ -83,6 +85,8 @@ class Game {
     void useItem(CollectableType &type);
     void buyItem(ShopItem &shopItem);
     void handleItemSelection();
+
+    void handleHotbarSelection();
 
     int getCoinCount() const;
     bool spendCoins(int amount);
@@ -111,6 +115,9 @@ class Game {
         initNPC();
         initQuests();
         initShop();
+
+        // testing
+        inventory.emplace_back(CollectableType::Map, 1);
     }
 
     void update();

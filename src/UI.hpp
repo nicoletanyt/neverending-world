@@ -2,12 +2,12 @@
 
 #include "Constants.hpp"
 #include "Dialogue.hpp"
-// #include "Game.hpp"
 #include "entities/Collectable.hpp"
 #include "entities/Enemy.hpp"
 #include "entities/NPC.hpp"
 #include <map>
 #include <raylib.h>
+#include <set>
 #include <string>
 #include <vector>
 using namespace std;
@@ -25,6 +25,7 @@ constexpr Color Parchment = {216, 208, 184, 255};      // #D8D0B8
 constexpr Color FadedParchment = {216, 208, 184, 191}; // 75% opacity
 constexpr Color MossGreen = {105, 124, 104, 255};      // #697C68
 constexpr Color Brown = {156, 118, 91, 255};           // #9C765B
+constexpr Color MutedBrown = {150, 124, 101, 255};     // #967C65
 constexpr Color MutedRed = {166, 95, 89, 255};         // #A65F59
 constexpr Color FogGrey = {146, 154, 154, 255};        // #929A9A
 } // namespace Palette
@@ -62,6 +63,12 @@ struct PanelStyle {
     float roundness = 0.1f;
     int segments = 4;
     float opacity = 0.98f;
+};
+
+struct MapStyle : PanelStyle {
+    float sectionGap = 40.0f;
+    float lineWidthOffset = 10.0f;
+    float lineOffsetY = 10.0f;
 };
 
 struct InventoryStyle : PanelStyle {
@@ -131,6 +138,7 @@ struct UIStyle {
     PanelStyle panel;
     ShopStyle shop;
     QuestStyle quest;
+    MapStyle map;
 };
 
 struct TextStyle {
@@ -144,7 +152,7 @@ struct TextStyle {
 struct TextLayout {
     Vector2 pos;
     vector<string> lines;
-    float height;
+    Vector2 size;
     TextStyle style;
 };
 
@@ -166,7 +174,7 @@ class UI {
     void renderText(const TextLayout &layout, float lineHeight = 1.0f);
 
     void renderSlot(const Rectangle &rect, const SlotStyle &style,
-                    Color fillColor);
+                    Color fillColor, bool selected = false);
     Rectangle getHotbarSlotRect(int index) const;
     void renderInventoryItem(const InventoryItem &item, const Rectangle &slot,
                              Color colour, const SlotStyle slotStyle);
@@ -190,7 +198,8 @@ class UI {
 
     void loadAssets();
     void renderTopbar(Player &player);
-    void renderHotbar(const vector<InventoryItem> &inventory);
+    void renderHotbar(const vector<InventoryItem> &inventory,
+                      int selectedHotbar);
     void renderEnemyHealth(const Enemy &enemy);
     void renderNPCName(const NPC &npc);
     void renderInventory(const vector<InventoryItem> &inventory);
@@ -198,4 +207,9 @@ class UI {
                         int selectedOption);
     void renderQuest(const Quest &quest);
     void renderShop(vector<ShopItem> shops);
+
+    void renderMap(const map<Location, vector<Tree>> &trees,
+                   const map<Location, vector<Enemy>> &enemies,
+                   const map<Location, vector<NPC>> &npcs,
+                   const set<Location> &visited, const Location &location);
 };

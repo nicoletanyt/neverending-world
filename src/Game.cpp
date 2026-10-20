@@ -17,13 +17,14 @@ void Game::update() {
     if (IsKeyPressed(KEY_E)) {
         if (mode == GameMode::Playing)
             mode = GameMode::Inventory;
-        else
+        else if (mode == GameMode::Inventory)
             mode = GameMode::Playing;
     }
 
     switch (mode) {
     case GameMode::Playing: {
         float dt = GetFrameTime();
+        handleHotbarSelection();
 
         if (IsKeyPressed(KEY_SPACE)) {
             player.fight();
@@ -37,6 +38,13 @@ void Game::update() {
                 addToInventory(item->type);
                 PlaySound(beepSound);
                 currentCollectables.erase(item);
+            }
+        }
+        if (IsKeyPressed(KEY_M)) {
+            if (selectedHotbar >= 0 && selectedHotbar < HOTBAR_SLOTS &&
+                (size_t)selectedHotbar < inventory.size() &&
+                inventory[selectedHotbar].type == CollectableType::Map) {
+                mode = GameMode::Map;
             }
         }
 
@@ -154,6 +162,11 @@ void Game::update() {
         }
         break;
     }
+    case GameMode::Map: {
+        if (IsKeyPressed(KEY_M))
+            mode = GameMode::Playing;
+        break;
+    }
     }
 }
 
@@ -244,6 +257,10 @@ void Game::removeFromInventory(const CollectableType &type, int quantity) {
 
 void Game::render() {
     DrawTextureEx(background, (Vector2){0, 0}, 0, 1, WHITE);
+    if (mode == GameMode::Map) {
+        ui.renderMap(trees, enemies, npcs, visited, location);
+        return;
+    }
 
     vector<RenderItem> renderItems;
     renderItems.push_back({player.getZLayer(), [this]() { player.render(); }});
@@ -282,9 +299,12 @@ void Game::render() {
                               selectedOption);
         break;
     }
+    case GameMode::Map: {
+        break;
+    }
     case GameMode::Playing: {
         ui.renderTopbar(player);
-        ui.renderHotbar(inventory);
+        ui.renderHotbar(inventory, selectedHotbar);
 
         if (activeQuest && activeQuest->status != QuestStatus::Completed)
             ui.renderQuest(*activeQuest);
@@ -448,4 +468,21 @@ bool Game::spendCoins(int amount) {
         return false;
     removeFromInventory(CollectableType::Coin, amount);
     return true;
+}
+
+void Game::handleHotbarSelection() {
+    map<int, int> keyMap = {{KEY_ONE, 0},
+                            {KEY_TWO, 1},
+                            {KEY_THREE, 2},
+                            {KEY_FOUR, 3},
+                            {KEY_FIVE, 4}};
+    for (const auto &[key, label] : keyMap) {
+        if (IsKeyPressed(key)) {
+            if (selectedHotbar == label)
+                selectedHotbar = -1;
+            else
+                selectedHotbar = label;
+            break;
+        }
+    }
 }

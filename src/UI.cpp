@@ -6,7 +6,9 @@
 #include "entities/Player.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
+#include <iostream>
 #include <raylib.h>
 #include <string>
 #include <type_traits>
@@ -93,7 +95,7 @@ void UI::renderQuest(const Quest &quest) {
                           to_string(objective.target) + "] " +
                           objective.description;
 
-    contentRect.y += questName.height + style.gap;
+    contentRect.y += questName.size.y + style.gap;
     TextLayout objectiveText = getTextLayout(
         progressText,
         {contentRect.x, contentRect.y, contentRect.width, contentRect.height},
@@ -103,7 +105,7 @@ void UI::renderQuest(const Quest &quest) {
         });
 
     container.height =
-        questName.height + style.gap + objectiveText.height + style.padding * 2;
+        questName.size.y + style.gap + objectiveText.size.y + style.padding * 2;
 
     DrawRectangleRounded(container, 0.15f, 8, Fade(Palette::Parchment, .8f));
     DrawRectangleRoundedLinesEx(container, 0.15f, 8, 3.0f, Palette::Brown);
@@ -111,11 +113,12 @@ void UI::renderQuest(const Quest &quest) {
     renderText(questName);
     renderText(objectiveText);
 }
-void UI::renderHotbar(const vector<InventoryItem> &inventory) {
+void UI::renderHotbar(const vector<InventoryItem> &inventory,
+                      int selectedHotbar) {
     const auto &style = STYLES.hotbar;
     for (int i = 0; i < HOTBAR_SLOTS; ++i) {
         const Rectangle slot = getHotbarSlotRect(i);
-        renderSlot(slot, style.slot, Palette::FogGrey);
+        renderSlot(slot, style.slot, Palette::FogGrey, selectedHotbar == i);
 
         if (i < static_cast<int>(inventory.size())) {
             renderInventoryItem(inventory[i], slot, Palette::Charcoal,
@@ -125,9 +128,15 @@ void UI::renderHotbar(const vector<InventoryItem> &inventory) {
 }
 
 void UI::renderSlot(const Rectangle &rect, const SlotStyle &style,
-                    Color fillColor) {
-    DrawRectangleRounded(rect, style.roundness, style.segments,
-                         Fade(fillColor, style.fillOpacity));
+                    Color fillColor, bool selected) {
+
+    if (selected)
+        DrawRectangleRounded(rect, style.roundness, style.segments,
+                             Fade(Palette::MutedRed, style.fillOpacity));
+    else
+        DrawRectangleRounded(rect, style.roundness, style.segments,
+                             Fade(fillColor, style.fillOpacity));
+
     DrawRectangleRoundedLinesEx(rect, style.roundness, style.segments,
                                 style.borderWidth,
                                 Fade(Palette::Parchment, style.borderOpacity));
@@ -207,8 +216,8 @@ void UI::renderDialogue(const DialogueNode &node, const NPC &npc,
     vector<TextLayout> choiceLayout;
 
     Rectangle remainingRect = {
-        rightRect.x, rightRect.y + dialogueText.height + style.rowGap,
-        rightRect.width, rightRect.height - dialogueText.height - style.rowGap};
+        rightRect.x, rightRect.y + dialogueText.size.y + style.rowGap,
+        rightRect.width, rightRect.height - dialogueText.size.y - style.rowGap};
 
     for (int i = 0; i < choiceCount; ++i) {
         const string choiceText =
@@ -222,7 +231,7 @@ void UI::renderDialogue(const DialogueNode &node, const NPC &npc,
                               .colour = colour,
                           });
         choiceLayout.push_back(layout);
-        remainingRect.y += layout.height + style.choiceGap;
+        remainingRect.y += layout.size.y + style.choiceGap;
     }
 
     for (int i = 0; i < choiceCount; ++i)
@@ -294,8 +303,8 @@ Rectangle UI::renderItemDetails(const InventoryItem &item,
                                             .fontSize = FontSize::Medium,
                                             .colour = Palette::Parchment,
                                         });
-    remainingRect.y += itemName.height + style.rowGap;
-    remainingRect.height -= itemName.height + style.rowGap;
+    remainingRect.y += itemName.size.y + style.rowGap;
+    remainingRect.height -= itemName.size.y + style.rowGap;
 
     const float thickness = 2.0f;
     DrawLineEx({remainingRect.x, remainingRect.y},
@@ -312,7 +321,7 @@ Rectangle UI::renderItemDetails(const InventoryItem &item,
                       });
     renderText(itemName);
     renderText(itemDescription);
-    remainingRect.y += itemDescription.height + 50.0f;
+    remainingRect.y += itemDescription.size.y + 50.0f;
 
     // Image
     const float detailCenterX = remainingRect.x + (remainingRect.width) / 2;
@@ -352,7 +361,7 @@ void UI::renderDetailItem(const ShopItem &shopItem,
             .colour = Palette::Parchment,
         });
     renderText(priceText);
-    remainingRect.y += priceText.height + 30.0f;
+    remainingRect.y += priceText.size.y + 30.0f;
     const string buyText =
         shopItem.stockRemaining == 0 ? "No more stock!" : "[Q] Buy";
     renderText(getTextLayout(buyText.c_str(), remainingRect,
@@ -487,10 +496,16 @@ float UI::getTextHeight(int lineCount, float fontSize, float lineHeight) {
 
 TextLayout UI::getTextLayout(const string &text, const Rectangle &bounds,
                              TextStyle style) {
+    const Font &font = fonts.at(style.fontSize);
     vector<string> lines = wrapText(text, bounds.width, style);
     float height = getTextHeight(lines.size(), style.fontSize);
+    float width = lines.size() == 1
+                      ? MeasureTextEx(font, lines[0].c_str(), style.fontSize,
+                                      style.spacing)
+                            .x
+                      : bounds.width;
     Vector2 pos = getStartPos(bounds, style, height);
-    return {pos, lines, height, style};
+    return {pos, lines, {width, height}, style};
 }
 
 void UI::drawTextureInSquare(const Texture2D &texture, Vector2 center,
@@ -531,7 +546,7 @@ Rectangle UI::renderItemGrid(const vector<T> &items, const string &heading) {
                                          .spacing = 1.5f,
                                          .colour = Palette::Brown,
                                      });
-    float topOffset = title.height + style.topGap;
+    float topOffset = title.size.y + style.topGap;
 
     Rectangle inventoryRect = {leftRect.x, leftRect.y + topOffset,
                                leftRect.width, leftRect.height - topOffset};
@@ -564,3 +579,88 @@ UI::renderItemGrid<InventoryItem>(const vector<InventoryItem> &,
                                   const string &heading);
 template Rectangle UI::renderItemGrid<ShopItem>(const vector<ShopItem> &,
                                                 const string &heading);
+
+void UI::renderMap(const map<Location, vector<Tree>> &trees,
+                   const map<Location, vector<Enemy>> &enemies,
+                   const map<Location, vector<NPC>> &npcs,
+                   const set<Location> &visited, const Location &location) {
+    const auto &style = STYLES.map;
+    const Rectangle containerRect = {style.margin, style.margin, style.width,
+                                     style.height};
+    const Rectangle contentRect = getContentRect(containerRect, style.padding);
+
+    DrawRectangleRounded(containerRect, style.roundness, style.segments,
+                         Fade(Palette::Charcoal, style.opacity));
+
+    TextLayout title = getTextLayout("World Map", contentRect,
+                                     {
+                                         .fontSize = FontSize::Large,
+                                         .spacing = 1.5f,
+                                         .colour = Palette::Brown,
+                                     });
+    renderText(title);
+
+    TextLayout locationLabel =
+        getTextLayout("Current Location: " + location.toString(), contentRect,
+                      {.fontSize = FontSize::Medium,
+                       .spacing = 1.5f,
+                       .colour = Palette::Brown,
+                       .vertical = Align::End});
+    renderText(locationLabel);
+
+    const Rectangle map = {contentRect.x,
+                           contentRect.y + title.size.y + style.sectionGap,
+                           contentRect.width,
+                           contentRect.height - locationLabel.size.y -
+                               title.size.y - style.sectionGap * 2
+
+    };
+
+    // DrawRectangleLinesEx(map, 5.0f, Palette::Brown);
+
+    Vector2 xLimits = {INT16_MAX, 0}, yLimits = {INT16_MAX, 0};
+    for (const Location &location : visited) {
+        xLimits = {min(xLimits.x, (float)location.x),
+                   max(xLimits.y, (float)location.x)};
+        yLimits = {min(yLimits.x, (float)location.y),
+                   max(yLimits.y, (float)location.y)};
+    }
+
+    Vector2 cellCounts = {abs(xLimits.y - xLimits.x) + 1.0f,
+                          abs(yLimits.y - yLimits.x) + 1.0f};
+    Vector2 cellSize = {map.width / cellCounts.x, map.height / cellCounts.y};
+
+    Location currentLoc = {(int)xLimits.x, (int)yLimits.x};
+    for (int i = 0; i < cellCounts.x; i++) {
+        for (int j = 0; j < cellCounts.y; j++) {
+            Rectangle rect = {i * cellSize.x + map.x, j * cellSize.y + map.y,
+                              cellSize.x, cellSize.y};
+
+            float thickness = 2.0f;
+            Rectangle innerRect = {rect.x + thickness, rect.y + thickness,
+                                   rect.width - thickness * 2,
+                                   rect.height - thickness * 2};
+
+            DrawRectangleRec(innerRect, visited.contains(currentLoc)
+                                            ? Palette::Parchment
+                                            : Palette::Charcoal);
+            DrawRectangleLinesEx(rect, thickness,
+                                 location == currentLoc ? Palette::Brown
+                                                        : Palette::Charcoal);
+
+            if (visited.contains(currentLoc)) {
+                const Rectangle rectContent =
+                    getContentRect(rect, rect.width / 12.0f);
+                renderText(
+                    getTextLayout(currentLoc.toString(), rectContent,
+                                  {.colour = Fade(Palette::MutedBrown, 0.85f),
+                                   .horizontal = Align::Start,
+                                   .vertical = Align::Start}));
+            }
+
+            currentLoc.y++;
+        }
+        currentLoc.x++;
+        currentLoc.y = 0;
+    }
+}

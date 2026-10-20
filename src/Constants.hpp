@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 #include <raylib.h>
+#include <string>
 using namespace std;
 
 inline constexpr float WINDOW_WIDTH = 900.0f;
@@ -28,6 +29,12 @@ struct Location {
         if (x != other.x)
             return x < other.x;
         return y < other.y;
+    }
+    bool operator==(const Location &other) const {
+        return x == other.x && y == other.y;
+    }
+    string toString() const {
+        return "(" + to_string(x) + ", " + to_string(y) + ")";
     }
 };
 
