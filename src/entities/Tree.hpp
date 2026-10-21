@@ -5,12 +5,12 @@
 using namespace std;
 
 class Tree {
-private:
-    Vector2 pos;
+  private:
     static constexpr float scale = 2.0f;
     int type;
 
-public:
+  public:
+    Vector2 pos;
     static vector<Texture2D> assets;
     static void loadAssets();
     Tree() {

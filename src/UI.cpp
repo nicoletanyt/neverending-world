@@ -39,6 +39,12 @@ void UI::loadAssets() {
             LoadFontEx(fontFile, static_cast<int>(size), nullptr, 250);
         SetTextureFilter(fonts[size].texture, TEXTURE_FILTER_POINT);
     }
+
+    mapLegend[LegendType::Player] = LoadTexture("assets/profile.png");
+    mapLegend[LegendType::Tree] = LoadTexture("assets/tree/tree2.png");
+    mapLegend[LegendType::Enemy] = LoadTexture("assets/enemy-legend.png");
+    mapLegend[LegendType::NPC1] = LoadTexture("assets/avatars/npc_1.png");
+    mapLegend[LegendType::NPC2] = LoadTexture("assets/avatars/npc_2.png");
 }
 
 void UI::renderTopbar(Player &player) {
@@ -220,7 +226,7 @@ void UI::renderDialogue(const DialogueNode &node, const NPC &npc,
 
     for (int i = 0; i < choiceCount; ++i) {
         const string choiceText =
-            (selectedOption == i ? "> " : "  ") + node.choices[i].text;
+            (selectedOption == i ? "> (Enter) " : "  ") + node.choices[i].text;
         const Color colour =
             selectedOption == i ? Palette::MossGreen : Palette::Parchment;
         const TextLayout layout =
@@ -579,11 +585,18 @@ UI::renderItemGrid<InventoryItem>(const vector<InventoryItem> &,
 template Rectangle UI::renderItemGrid<ShopItem>(const vector<ShopItem> &,
                                                 const string &heading);
 
+void UI::drawMarker(LegendType legendType, Vector2 pos, Rectangle innerRect) {
+    DrawTextureEx(mapLegend[legendType],
+                  {innerRect.x + pos.x / WINDOW_WIDTH * innerRect.width,
+                   innerRect.y + pos.y / WINDOW_HEIGHT * innerRect.height},
+                  0, .4f, WHITE);
+}
+
 void UI::renderMap(const map<Location, vector<Tree>> &trees,
                    const map<Location, vector<Enemy>> &enemies,
                    const map<Location, vector<NPC>> &npcs,
                    const set<Location> &visited, const Location &location,
-                   Vector2 mapOffset) {
+                   Vector2 mapOffset, Vector2 playerPos) {
     const auto &style = STYLES.map;
     const Rectangle containerRect = {style.margin, style.margin, style.width,
                                      style.height};
@@ -641,7 +654,19 @@ void UI::renderMap(const map<Location, vector<Tree>> &trees,
         DrawRectangleRec(innerRect, Palette::Parchment);
         if (location == currentLoc) {
             DrawRectangleLinesEx(rect, style.cellGap, Palette::Brown);
+            drawMarker(LegendType::Player, playerPos, innerRect);
         }
+        for (const auto &enemy : enemies.at(currentLoc)) {
+            drawMarker(LegendType::Enemy, enemy.pos, innerRect);
+        }
+        for (const auto &tree : trees.at(currentLoc)) {
+            drawMarker(LegendType::Tree, tree.pos, innerRect);
+        }
+        for (const auto &npc : npcs.at(currentLoc)) {
+            drawMarker(npc.type == 1 ? LegendType::NPC1 : LegendType::NPC2,
+                       npc.pos, innerRect);
+        }
+
         const Rectangle rectContent = getContentRect(rect, rect.width / 12.0f);
         renderText(getTextLayout(currentLoc.toString(), rectContent,
                                  {.colour = Fade(Palette::MutedBrown, 0.85f),

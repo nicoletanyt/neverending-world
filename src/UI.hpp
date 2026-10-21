@@ -18,6 +18,7 @@ struct ShopItem;
 struct Quest;
 
 enum class Align { Center, Start, End };
+enum class LegendType { Tree, Enemy, Player, NPC1, NPC2 };
 
 namespace Palette {
 constexpr Color Charcoal = {37, 43, 40, 255};          // #252B28
@@ -166,6 +167,7 @@ class UI {
 
     vector<Texture2D> hearts;
     map<CollectableType, ItemIcon> itemAssets;
+    map<LegendType, Texture2D> mapLegend;
     Texture2D profileAsset;
 
     Vector2 getStartPos(Rectangle bounds, TextStyle style, float textHeight);
@@ -194,6 +196,7 @@ class UI {
                           const Rectangle &detailRect);
     void renderDetailItem(const ShopItem &shopItem,
                           const Rectangle &detailRect);
+    void drawMarker(LegendType legendType, Vector2 pos, Rectangle innerRect);
 
   public:
     int selectedSquare = -1;
@@ -215,5 +218,5 @@ class UI {
                    const map<Location, vector<Enemy>> &enemies,
                    const map<Location, vector<NPC>> &npcs,
                    const set<Location> &visited, const Location &location,
-                   Vector2 mapOffset);
+                   Vector2 mapOffset, Vector2 playerPos);
 };

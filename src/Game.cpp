@@ -270,7 +270,8 @@ void Game::removeFromInventory(const CollectableType &type, int quantity) {
 void Game::render() {
     DrawTextureEx(background, (Vector2){0, 0}, 0, 1, WHITE);
     if (mode == GameMode::Map) {
-        ui.renderMap(trees, enemies, npcs, visited, location, mapOffset);
+        ui.renderMap(trees, enemies, npcs, visited, location, mapOffset,
+                     player.pos);
         return;
     }
 
