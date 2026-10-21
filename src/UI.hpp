@@ -69,6 +69,9 @@ struct MapStyle : PanelStyle {
     float sectionGap = 40.0f;
     float lineWidthOffset = 10.0f;
     float lineOffsetY = 10.0f;
+
+    float cellSize = 180.0f;
+    float cellGap = 2.0f;
 };
 
 struct InventoryStyle : PanelStyle {
@@ -211,5 +214,6 @@ class UI {
     void renderMap(const map<Location, vector<Tree>> &trees,
                    const map<Location, vector<Enemy>> &enemies,
                    const map<Location, vector<NPC>> &npcs,
-                   const set<Location> &visited, const Location &location);
+                   const set<Location> &visited, const Location &location,
+                   Vector2 mapOffset);
 };

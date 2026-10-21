@@ -62,6 +62,8 @@ class Game {
 
     int selectedHotbar = -1;
 
+    Vector2 mapOffset;
+
     Sound swordSound = LoadSound("assets/sounds/swoosh.mp3");
     Sound selectSound = LoadSound("assets/sounds/select.mp3");
     Sound beepSound = LoadSound("assets/sounds/beep.mp3");

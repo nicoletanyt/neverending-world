@@ -14,6 +14,7 @@
 #include <vector>
 
 void Game::update() {
+    float dt = GetFrameTime();
     if (IsKeyPressed(KEY_E)) {
         if (mode == GameMode::Playing)
             mode = GameMode::Inventory;
@@ -23,7 +24,6 @@ void Game::update() {
 
     switch (mode) {
     case GameMode::Playing: {
-        float dt = GetFrameTime();
         handleHotbarSelection();
 
         if (IsKeyPressed(KEY_SPACE)) {
@@ -44,6 +44,7 @@ void Game::update() {
             if (selectedHotbar >= 0 && selectedHotbar < HOTBAR_SLOTS &&
                 (size_t)selectedHotbar < inventory.size() &&
                 inventory[selectedHotbar].type == CollectableType::Map) {
+                mapOffset = {0, 0};
                 mode = GameMode::Map;
             }
         }
@@ -163,8 +164,19 @@ void Game::update() {
         break;
     }
     case GameMode::Map: {
-        if (IsKeyPressed(KEY_M))
+        if (IsKeyPressed(KEY_ESCAPE))
             mode = GameMode::Playing;
+        if (IsKeyPressed(KEY_W))
+            mapOffset.y += 30;
+        if (IsKeyPressed(KEY_A))
+            mapOffset.x += 30;
+        if (IsKeyPressed(KEY_S))
+            mapOffset.y -= 30;
+        if (IsKeyPressed(KEY_D))
+            mapOffset.x -= 30;
+        if (IsKeyPressed(KEY_R))
+            mapOffset = {0, 0};
+
         break;
     }
     }
@@ -258,7 +270,7 @@ void Game::removeFromInventory(const CollectableType &type, int quantity) {
 void Game::render() {
     DrawTextureEx(background, (Vector2){0, 0}, 0, 1, WHITE);
     if (mode == GameMode::Map) {
-        ui.renderMap(trees, enemies, npcs, visited, location);
+        ui.renderMap(trees, enemies, npcs, visited, location, mapOffset);
         return;
     }
 

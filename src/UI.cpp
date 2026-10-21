@@ -6,7 +6,6 @@
 #include "entities/Player.hpp"
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
 #include <format>
 #include <iostream>
 #include <raylib.h>
@@ -583,7 +582,8 @@ template Rectangle UI::renderItemGrid<ShopItem>(const vector<ShopItem> &,
 void UI::renderMap(const map<Location, vector<Tree>> &trees,
                    const map<Location, vector<Enemy>> &enemies,
                    const map<Location, vector<NPC>> &npcs,
-                   const set<Location> &visited, const Location &location) {
+                   const set<Location> &visited, const Location &location,
+                   Vector2 mapOffset) {
     const auto &style = STYLES.map;
     const Rectangle containerRect = {style.margin, style.margin, style.width,
                                      style.height};
@@ -600,12 +600,13 @@ void UI::renderMap(const map<Location, vector<Tree>> &trees,
                                      });
     renderText(title);
 
-    TextLayout locationLabel =
-        getTextLayout("Current Location: " + location.toString(), contentRect,
-                      {.fontSize = FontSize::Medium,
-                       .spacing = 1.5f,
-                       .colour = Palette::Brown,
-                       .vertical = Align::End});
+    TextLayout locationLabel = getTextLayout(
+        "Press ESC to close the map, or R to recenter on your location.",
+        contentRect,
+        {.fontSize = FontSize::Medium,
+         .spacing = 1.5f,
+         .colour = Palette::Brown,
+         .vertical = Align::End});
     renderText(locationLabel);
 
     const Rectangle map = {contentRect.x,
@@ -616,51 +617,36 @@ void UI::renderMap(const map<Location, vector<Tree>> &trees,
 
     };
 
-    // DrawRectangleLinesEx(map, 5.0f, Palette::Brown);
+    DrawRectangleRec(map, Palette::FadedParchment);
+    BeginScissorMode(map.x, map.y, map.width, map.height);
+    Vector2 rectCenter = {
+        location.x * style.cellSize + style.cellSize / 2,
+        location.y * style.cellSize + style.cellSize / 2,
+    };
+    Vector2 centerOffset = {
+        map.x + map.width / 2 - rectCenter.x,
+        map.y + map.height / 2 - rectCenter.y,
+    };
+    centerOffset.x += mapOffset.x;
+    centerOffset.y += mapOffset.y;
 
-    Vector2 xLimits = {INT16_MAX, 0}, yLimits = {INT16_MAX, 0};
-    for (const Location &location : visited) {
-        xLimits = {min(xLimits.x, (float)location.x),
-                   max(xLimits.y, (float)location.x)};
-        yLimits = {min(yLimits.x, (float)location.y),
-                   max(yLimits.y, (float)location.y)};
-    }
+    for (const Location &currentLoc : visited) {
+        Rectangle rect = {currentLoc.x * style.cellSize + centerOffset.x,
+                          currentLoc.y * style.cellSize + centerOffset.y,
+                          style.cellSize, style.cellSize};
+        Rectangle innerRect = {
+            rect.x + style.cellGap / 2, rect.y + style.cellGap / 2,
+            rect.width - style.cellGap, rect.height - style.cellGap};
 
-    Vector2 cellCounts = {abs(xLimits.y - xLimits.x) + 1.0f,
-                          abs(yLimits.y - yLimits.x) + 1.0f};
-    Vector2 cellSize = {map.width / cellCounts.x, map.height / cellCounts.y};
-
-    Location currentLoc = {(int)xLimits.x, (int)yLimits.x};
-    for (int i = 0; i < cellCounts.x; i++) {
-        for (int j = 0; j < cellCounts.y; j++) {
-            Rectangle rect = {i * cellSize.x + map.x, j * cellSize.y + map.y,
-                              cellSize.x, cellSize.y};
-
-            float thickness = 2.0f;
-            Rectangle innerRect = {rect.x + thickness, rect.y + thickness,
-                                   rect.width - thickness * 2,
-                                   rect.height - thickness * 2};
-
-            DrawRectangleRec(innerRect, visited.contains(currentLoc)
-                                            ? Palette::Parchment
-                                            : Palette::Charcoal);
-            DrawRectangleLinesEx(rect, thickness,
-                                 location == currentLoc ? Palette::Brown
-                                                        : Palette::Charcoal);
-
-            if (visited.contains(currentLoc)) {
-                const Rectangle rectContent =
-                    getContentRect(rect, rect.width / 12.0f);
-                renderText(
-                    getTextLayout(currentLoc.toString(), rectContent,
-                                  {.colour = Fade(Palette::MutedBrown, 0.85f),
-                                   .horizontal = Align::Start,
-                                   .vertical = Align::Start}));
-            }
-
-            currentLoc.y++;
+        DrawRectangleRec(innerRect, Palette::Parchment);
+        if (location == currentLoc) {
+            DrawRectangleLinesEx(rect, style.cellGap, Palette::Brown);
         }
-        currentLoc.x++;
-        currentLoc.y = 0;
+        const Rectangle rectContent = getContentRect(rect, rect.width / 12.0f);
+        renderText(getTextLayout(currentLoc.toString(), rectContent,
+                                 {.colour = Fade(Palette::MutedBrown, 0.85f),
+                                  .horizontal = Align::Start,
+                                  .vertical = Align::Start}));
     }
+    EndScissorMode();
 }
